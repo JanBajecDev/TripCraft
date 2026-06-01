@@ -8,6 +8,14 @@ const SHORT_MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
 
+export function formatTripDateLabel(
+  dateMode: 'exact' | 'flexible',
+  dateExact: string,
+  dateMonth: string,
+): string {
+  return dateMode === 'exact' ? dateExact : `Flexible · ${dateMonth}`
+}
+
 export function parseExactDate(dateExact: string): { start: string; end: string } {
   const m = dateExact.match(/(\d{1,2})[–-](\d{1,2})\s+(\w+)\s+(\d{4})/)
   if (!m) return { start: '', end: '' }

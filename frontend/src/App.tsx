@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IntakePage } from "./pages/IntakePage";
 import { PlanningPage } from "./pages/PlanningPage";
 import { createTrip } from "./lib/api";
+import { formatTripDateLabel } from "./lib/dates";
 import { DESTINATIONS } from "./lib/constants";
 import type { TripIntake } from "./types";
 
@@ -59,7 +60,7 @@ export default function App() {
       } days, ${intake.travellers} ${
         intake.travellers === 1 ? "person" : "people"
       }, budget £${intake.budgetGbp.toLocaleString()}, dates ${
-        intake.dateLabel
+        formatTripDateLabel(intake.dateMode, intake.dateExact, intake.dateMonth)
       }. Interests: ${intake.interests.join(", ")}.`;
       setTripId(id);
       setInitialMessage(msg);

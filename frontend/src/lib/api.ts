@@ -1,4 +1,5 @@
 import type { TripIntake } from '../types'
+import { formatTripDateLabel } from './dates'
 
 const BASE = '/api'
 
@@ -11,7 +12,7 @@ export async function createTrip(intake: TripIntake): Promise<{ tripId: string }
       destination: intake.destination,
       destCode:    intake.destCode,
       dateMode:    intake.dateMode,
-      dateLabel:   intake.dateMode === 'exact' ? intake.dateExact : `Flexible · ${intake.dateMonth}`,
+      dateLabel:   formatTripDateLabel(intake.dateMode, intake.dateExact, intake.dateMonth),
       tripDays:    intake.tripDays,
       travellers:  intake.travellers,
       budgetGbp:   intake.budgetGbp,

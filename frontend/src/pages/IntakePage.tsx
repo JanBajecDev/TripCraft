@@ -6,7 +6,7 @@ import { CitySearch, type CityItem } from '../components/intake/CitySearch'
 import { Stepper } from '../components/intake/Stepper'
 import { FieldCard } from '../components/intake/FieldCard'
 import type { TripIntake } from '../types'
-import { parseExactDate, formatExactDate, parseMonth, formatMonth } from '../lib/dates'
+import { parseExactDate, formatExactDate, parseMonth, formatMonth, formatTripDateLabel } from '../lib/dates'
 import { Check, Info, ArrowRight, Utensils as Restaurant, History, Building2, Music2, Palmtree as BeachAccess, Palette, Trees as Forest, ShoppingBag } from 'lucide-react'
 
 interface IntakePageProps {
@@ -209,7 +209,10 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                 <motion.button
                   type="button"
                   className={`seg${state.dateMode === 'exact' ? ' on' : ''}`}
-                  onClick={() => set({ dateMode: 'exact' })}
+                  onClick={() => set({
+                    dateMode: 'exact',
+                    dateLabel: formatTripDateLabel('exact', state.dateExact, state.dateMonth),
+                  })}
                   whileTap={{ scale: 0.96 }}
                 >
                   Exact dates
@@ -217,7 +220,10 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                 <motion.button
                   type="button"
                   className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`}
-                  onClick={() => set({ dateMode: 'flexible' })}
+                  onClick={() => set({
+                    dateMode: 'flexible',
+                    dateLabel: formatTripDateLabel('flexible', state.dateExact, state.dateMonth),
+                  })}
                   whileTap={{ scale: 0.96 }}
                 >
                   Flexible — best value

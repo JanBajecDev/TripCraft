@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { DESTINATIONS as FALLBACK_DESTINATIONS, ORIGINS as FALLBACK_ORIGINS } from '../../lib/constants'
-import { parseExactDate, formatExactDate, parseMonth, formatMonth } from '../../lib/dates'
+import { parseExactDate, formatExactDate, parseMonth, formatMonth, formatTripDateLabel } from '../../lib/dates'
 import { CitySearch, type CityItem } from '../intake/CitySearch'
 import { Stepper } from '../intake/Stepper'
 import type { TripIntake } from '../../types'
@@ -102,8 +102,26 @@ function DatesChip({ state, set }: { state: TripIntake; set: (partial: Partial<T
         <div className="sum-pop" onClick={e => e.stopPropagation()}>
           <div className="pop-title">When</div>
           <div className="seg-group pop-seg">
-            <button type="button" className={`seg${state.dateMode === 'exact' ? ' on' : ''}`} onClick={() => set({ dateMode: 'exact' })}>Exact</button>
-            <button type="button" className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`} onClick={() => set({ dateMode: 'flexible' })}>Flexible</button>
+            <button
+              type="button"
+              className={`seg${state.dateMode === 'exact' ? ' on' : ''}`}
+              onClick={() => set({
+                dateMode: 'exact',
+                dateLabel: formatTripDateLabel('exact', state.dateExact, state.dateMonth),
+              })}
+            >
+              Exact
+            </button>
+            <button
+              type="button"
+              className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`}
+              onClick={() => set({
+                dateMode: 'flexible',
+                dateLabel: formatTripDateLabel('flexible', state.dateExact, state.dateMonth),
+              })}
+            >
+              Flexible
+            </button>
           </div>
           {state.dateMode === 'exact' ? (
             <div className="date-inputs" key={state.dateExact}>
