@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { DESTINATIONS, ORIGINS, INTERESTS } from '../lib/constants'
 import { Stepper } from '../components/intake/Stepper'
 import { FieldCard } from '../components/intake/FieldCard'
@@ -8,6 +9,7 @@ interface IntakePageProps {
   state: TripIntake
   set: (partial: Partial<TripIntake>) => void
   onSubmit: () => void
+  isLoading?: boolean
 }
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -22,103 +24,264 @@ const iconMap: Record<string, React.ReactNode> = {
   shopping_bag: <ShoppingBag size={17} />,
 }
 
-export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
+
+const heroVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.05,
+    },
+  },
+}
+
+const heroItemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
+
+const chipSpring = {
+  type: 'spring',
+  stiffness: 500,
+  damping: 25,
+} as const
+
+export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps) {
   const dest = DESTINATIONS.find(d => d.id === state.destination) ?? DESTINATIONS[0]
   const pct = ((state.budgetGbp - 800) / (6000 - 800) * 100).toFixed(1)
 
   return (
     <div className="intake-scroll">
       <div className="intake">
-        <header className="intake-hero">
-          <div className="eyebrow">Plan with TripCraft</div>
-          <h1 className="display">Tell us the shape of the trip.<br />We'll plan the rest — then talk it through.</h1>
-          <p className="lede">Pick a few essentials below. TripCraft drafts a full itinerary — flights, a place to stay, things to do — and you fine-tune everything by chatting with it.</p>
-        </header>
+        <motion.header
+          className="intake-hero"
+          variants={heroVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div className="eyebrow" variants={heroItemVariants}>
+            Plan with TripCraft
+          </motion.div>
+          <motion.h1 className="display" variants={heroItemVariants}>
+            Tell us the shape of the trip.<br />We'll plan the rest — then talk it through.
+          </motion.h1>
+          <motion.p className="lede" variants={heroItemVariants}>
+            Pick a few essentials below. TripCraft drafts a full itinerary — flights, a place to stay, things to do — and you fine-tune everything by chatting with it.
+          </motion.p>
+        </motion.header>
 
-        <div className="field-grid">
-          <FieldCard icon="my_location" label="Flying from">
-            <div className="seg-select">
-              {ORIGINS.slice(0, 3).map(o => (
-                <button key={o} type="button" className={`seg${state.origin === o ? ' on' : ''}`} onClick={() => set({ origin: o })}>{o}</button>
-              ))}
-              <div className="select-wrap">
-                <select value={state.origin} onChange={e => set({ origin: e.target.value })}>
-                  {ORIGINS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <ChevronDown size={18} />
+        <motion.div
+          className="field-grid"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={itemVariants}>
+            <FieldCard icon="my_location" label="Flying from">
+              <div className="seg-select">
+                {ORIGINS.slice(0, 3).map(o => (
+                  <motion.button
+                    key={o}
+                    type="button"
+                    className={`seg${state.origin === o ? ' on' : ''}`}
+                    onClick={() => set({ origin: o })}
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    {o}
+                  </motion.button>
+                ))}
+                <div className="select-wrap">
+                  <select value={state.origin} onChange={e => set({ origin: e.target.value })}>
+                    {ORIGINS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <ChevronDown size={18} />
+                </div>
               </div>
-            </div>
-          </FieldCard>
+            </FieldCard>
+          </motion.div>
 
-          <FieldCard icon="travel_explore" label="Where to">
-            <div className="dest-row">
-              {DESTINATIONS.map(d => (
-                <button key={d.id} type="button" className={`dest-chip${state.destination === d.id ? ' on' : ''}`}
-                  onClick={() => set({ destination: d.id, destCode: d.code })}>
-                  <span className="dest-city">{d.city}</span>
-                  <span className="dest-code">{d.code}</span>
-                </button>
-              ))}
-            </div>
-            <p className="field-note"><Info size={15} />{dest.note} · {dest.country}</p>
-          </FieldCard>
+          <motion.div variants={itemVariants}>
+            <FieldCard icon="travel_explore" label="Where to">
+              <div className="dest-row">
+                {DESTINATIONS.map(d => (
+                  <motion.button
+                    key={d.id}
+                    type="button"
+                    className={`dest-chip${state.destination === d.id ? ' on' : ''}`}
+                    onClick={() => set({ destination: d.id, destCode: d.code })}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={chipSpring}
+                  >
+                    <span className="dest-city">{d.city}</span>
+                    <span className="dest-code">{d.code}</span>
+                  </motion.button>
+                ))}
+              </div>
+              <p className="field-note"><Info size={15} />{dest.note} · {dest.country}</p>
+            </FieldCard>
+          </motion.div>
 
-          <FieldCard icon="event" label="Dates">
-            <div className="seg-group">
-              <button type="button" className={`seg${state.dateMode === 'exact' ? ' on' : ''}`} onClick={() => set({ dateMode: 'exact' })}>Exact dates</button>
-              <button type="button" className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`} onClick={() => set({ dateMode: 'flexible' })}>Flexible — best value</button>
-            </div>
-            {state.dateMode === 'exact'
-              ? <div className="date-value"><CalendarDays size={19} />{state.dateExact}</div>
-              : <div className="date-value"><Search size={19} />We'll find the cheapest stretch in {state.dateMonth}</div>}
-          </FieldCard>
+          <motion.div variants={itemVariants}>
+            <FieldCard icon="event" label="Dates">
+              <div className="seg-group">
+                <motion.button
+                  type="button"
+                  className={`seg${state.dateMode === 'exact' ? ' on' : ''}`}
+                  onClick={() => set({ dateMode: 'exact' })}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  Exact dates
+                </motion.button>
+                <motion.button
+                  type="button"
+                  className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`}
+                  onClick={() => set({ dateMode: 'flexible' })}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  Flexible — best value
+                </motion.button>
+              </div>
+              {state.dateMode === 'exact'
+                ? <div className="date-value"><CalendarDays size={19} />{state.dateExact}</div>
+                : <div className="date-value"><Search size={19} />We'll find the cheapest stretch in {state.dateMonth}</div>}
+            </FieldCard>
+          </motion.div>
 
-          <FieldCard icon="schedule" label="Length of stay">
-            <Stepper value={state.tripDays} min={2} max={14} suffix=" days" onChange={v => set({ tripDays: v })} />
-            <p className="field-note">{state.tripDays - 1} nights away</p>
-          </FieldCard>
+          <motion.div variants={itemVariants}>
+            <FieldCard icon="schedule" label="Length of stay">
+              <Stepper value={state.tripDays} min={2} max={14} suffix=" days" onChange={v => set({ tripDays: v })} />
+              <p className="field-note">{state.tripDays - 1} nights away</p>
+            </FieldCard>
+          </motion.div>
 
-          <FieldCard icon="group" label="Travellers">
-            <Stepper value={state.travellers} min={1} max={8} suffix={state.travellers === 1 ? ' person' : ' people'} onChange={v => set({ travellers: v })} />
-          </FieldCard>
+          <motion.div variants={itemVariants}>
+            <FieldCard icon="group" label="Travellers">
+              <Stepper value={state.travellers} min={1} max={8} suffix={state.travellers === 1 ? ' person' : ' people'} onChange={v => set({ travellers: v })} />
+            </FieldCard>
+          </motion.div>
 
-          <FieldCard icon="payments" label="Total budget">
-            <div className="budget-value">£{state.budgetGbp.toLocaleString()}</div>
-            <input
-              type="range" min="800" max="6000" step="100"
-              value={state.budgetGbp}
-              onChange={e => set({ budgetGbp: Number(e.target.value) })}
-              className="budget-range"
-              style={{ '--pct': `${pct}%` } as React.CSSProperties}
-            />
-            <div className="budget-scale"><span>£800</span><span>£6,000</span></div>
-          </FieldCard>
+          <motion.div variants={itemVariants}>
+            <FieldCard icon="payments" label="Total budget">
+              <motion.div
+                className="budget-value"
+                key={state.budgetGbp}
+                initial={{ scale: 1.1, color: 'var(--color-primary)' }}
+                animate={{ scale: 1, color: 'var(--color-fg-1)' }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                £{state.budgetGbp.toLocaleString()}
+              </motion.div>
+              <input
+                type="range" min="800" max="6000" step="100"
+                value={state.budgetGbp}
+                onChange={e => set({ budgetGbp: Number(e.target.value) })}
+                className="budget-range"
+                style={{ '--pct': `${pct}%` } as React.CSSProperties}
+              />
+              <div className="budget-scale"><span>£800</span><span>£6,000</span></div>
+            </FieldCard>
+          </motion.div>
 
-          <FieldCard icon="interests" label="Interests" full>
-            <div className="interest-row">
-              {INTERESTS.map(it => {
-                const on = state.interests.includes(it.id)
-                return (
-                  <button key={it.id} type="button" className={`interest-chip${on ? ' on' : ''}`}
-                    onClick={() => set({ interests: on ? state.interests.filter(x => x !== it.id) : [...state.interests, it.id] })}>
-                    {iconMap[it.icon]}
-                    {it.label}
-                    {on && <Check size={17} className="check" />}
-                  </button>
-                )
-              })}
-            </div>
-          </FieldCard>
-        </div>
+          <motion.div variants={itemVariants} className="full">
+            <FieldCard icon="interests" label="Interests" full>
+              <div className="interest-row">
+                {INTERESTS.map(it => {
+                  const on = state.interests.includes(it.id)
+                  return (
+                    <motion.button
+                      key={it.id}
+                      type="button"
+                      className={`interest-chip${on ? ' on' : ''}`}
+                      onClick={() => set({ interests: on ? state.interests.filter(x => x !== it.id) : [...state.interests, it.id] })}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.92 }}
+                      transition={chipSpring}
+                      layout
+                    >
+                      {iconMap[it.icon]}
+                      {it.label}
+                      {on && (
+                        <motion.span
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={chipSpring}
+                        >
+                          <Check size={17} className="check" />
+                        </motion.span>
+                      )}
+                    </motion.button>
+                  )
+                })}
+              </div>
+            </FieldCard>
+          </motion.div>
+        </motion.div>
 
-        <div className="intake-cta">
-          <button type="button" className="btn-primary lg" onClick={onSubmit} disabled={state.interests.length === 0}>
-            Plan my trip
-            Plan my trip
-            <ArrowRight size={20} />
-          </button>
+        <motion.div
+          className="intake-cta"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
+        >
+          <motion.button
+            type="button"
+            className={`btn-primary lg${isLoading ? ' loading' : ''}`}
+            onClick={onSubmit}
+            disabled={state.interests.length === 0 || isLoading}
+            whileHover={isLoading ? {} : { scale: 1.03, y: -1 }}
+            whileTap={isLoading ? {} : { scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          >
+            {isLoading ? (
+              <>
+                Planning your trip
+                <motion.span
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  …
+                </motion.span>
+              </>
+            ) : (
+              <>
+                Plan my trip
+                <ArrowRight size={20} />
+              </>
+            )}
+          </motion.button>
           <p className="cta-note">Free to plan. You only book what you like.</p>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
