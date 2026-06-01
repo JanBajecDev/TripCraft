@@ -28,8 +28,8 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
     onTextDelta: (delta: string) => {
       setActiveBlocks(prev => appendTextDelta(prev, delta))
     },
-    onToolStart: (toolName: string) => {
-      setActiveBlocks(prev => addToolBlock(prev, toolName))
+    onToolStart: (toolName: string, detail?: string) => {
+      setActiveBlocks(prev => addToolBlock(prev, toolName, detail))
     },
     onToolDone: (toolName: string) => {
       setActiveBlocks(prev => markToolDone(prev, toolName))

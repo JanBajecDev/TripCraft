@@ -14,6 +14,25 @@ type MessageRow = InferSelectModel<typeof messages>
 type SseEvent = 'text' | 'tool_start' | 'tool_done' | 'itinerary_update' | 'suggestions' | 'done'
 type SendFn = (event: SseEvent, data: unknown) => void
 
+function summariseArgs(toolName: string, args: Record<string, unknown>): string {
+  switch (toolName) {
+    case 'google_flights':
+      return `${args.departure_id} → ${args.arrival_id}, ${args.outbound_date} – ${args.return_date}, ${args.adults} pax`
+    case 'google_hotels':
+      return `"${args.q}", ${args.check_in_date} – ${args.check_out_date}`
+    case 'yelp_search':
+      return `"${args.find_desc}" in ${args.find_loc}`
+    case 'google_events':
+      return `"${args.q}"`
+    case 'tripadvisor_search':
+      return `"${args.q}" (${args.searchType})`
+    case 'tripadvisor_reviews':
+      return `location ${args.location_id}`
+    default:
+      return JSON.stringify(args).slice(0, 80)
+  }
+}
+
 // Map emit tool names → itinerary section keys
 const EMIT_SECTION_MAP: Record<string, string> = {
   emit_flights:     'flights',
@@ -97,8 +116,9 @@ export async function runAgent({
           console.log(`[agent] emit_suggestions: ${JSON.stringify(args.items)}`)
           send('suggestions', { items: args.items })
         } else {
-          console.log(`[agent] tool call: ${name}`)
-          send('tool_start', { toolName: name })
+          const keyArgs = summariseArgs(name, args)
+          console.log(`[agent] tool call: ${name} — ${keyArgs}`)
+          send('tool_start', { toolName: name, label: keyArgs })
         }
         break
       }

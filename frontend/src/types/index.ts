@@ -106,7 +106,7 @@ export interface TripIntake {
 
 // Chat message types
 export interface TextBlock { type: 'text'; text: string; streaming?: boolean }
-export interface ToolBlock { type: 'tool'; toolName: string; label: string; status: 'running' | 'done' }
+export interface ToolBlock { type: 'tool'; toolName: string; label: string; detail?: string; status: 'running' | 'done' }
 export interface SuggestionsBlock { type: 'suggestions'; items: string[] }
 
 export type Block = TextBlock | ToolBlock | SuggestionsBlock

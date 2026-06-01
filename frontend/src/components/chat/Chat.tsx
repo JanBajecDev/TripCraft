@@ -3,18 +3,18 @@ import { Check, Bot, ArrowUp } from 'lucide-react'
 import { TOOL_LABELS } from '../../lib/constants'
 import type { ChatMessage, Block } from '../../types'
 
-function ToolRow({ toolName, status }: { toolName: string; status: 'running' | 'done' }) {
+function ToolRow({ toolName, detail, status }: { toolName: string; detail?: string; status: 'running' | 'done' }) {
   const label = TOOL_LABELS[toolName] ?? toolName
   return (
     <div className={`tool-row ${status}`}>
       <span className="tool-spin">
         {status === 'running'
           ? <span className="spinner" />
-          : <Check size={18} className="text-success" />}
+          : <Check size={16} />}
       </span>
       <span className="tool-text">
         <span className="tool-api">{label}</span>
-        {status === 'running' ? 'Searching…' : 'Done'}
+        {detail ?? (status === 'running' ? 'Searching…' : 'Done')}
       </span>
     </div>
   )
@@ -25,7 +25,7 @@ function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: s
     return <p className="msg-text">{block.text}{block.streaming && <span className="caret" />}</p>
   }
   if (block.type === 'tool') {
-    return <ToolRow toolName={block.toolName} status={block.status} />
+    return <ToolRow toolName={block.toolName} detail={block.detail} status={block.status} />
   }
   if (block.type === 'suggestions') {
     return (

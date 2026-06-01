@@ -3,7 +3,7 @@ import type { Block } from '../types'
 
 interface StreamCallbacks {
   onTextDelta: (delta: string) => void
-  onToolStart: (toolName: string) => void
+  onToolStart: (toolName: string, detail?: string) => void
   onToolDone:  (toolName: string) => void
   onItineraryUpdate: (section: string, data: unknown) => void
   onSuggestions: (items: string[]) => void
@@ -57,7 +57,7 @@ export function useAgentStream(tripId: string, callbacks: StreamCallbacks) {
             if (typeof d.delta === 'string') callbacks.onTextDelta(d.delta)
             break
           case 'tool_start':
-            if (typeof d.toolName === 'string') callbacks.onToolStart(d.toolName)
+            if (typeof d.toolName === 'string') callbacks.onToolStart(d.toolName, d.label as string | undefined)
             break
           case 'tool_done':
             if (typeof d.toolName === 'string') callbacks.onToolDone(d.toolName)
@@ -95,8 +95,8 @@ export function markStreamingDone(blocks: Block[]): Block[] {
   return blocks.map(b => b.type === 'text' ? { ...b, streaming: false } : b)
 }
 
-export function addToolBlock(blocks: Block[], toolName: string): Block[] {
-  return [...blocks, { type: 'tool', toolName, label: toolName, status: 'running' as const }]
+export function addToolBlock(blocks: Block[], toolName: string, detail?: string): Block[] {
+  return [...blocks, { type: 'tool', toolName, label: toolName, detail, status: 'running' as const }]
 }
 
 export function markToolDone(blocks: Block[], toolName: string): Block[] {
