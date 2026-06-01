@@ -194,7 +194,7 @@ export function SummaryBar({ state, set, theme, onToggleTheme, tripReady, total,
 
         <Plane size={20} className="sum-arrow" />
 
-        <Chip icon={<Compass size={18} />} label="To" value={dest.city} locked>
+        <Chip icon={<Compass size={18} />} label="To" value={dest?.city ?? ''} locked>
           <div className="pop-title">Destination</div>
           <CitySearch
             items={destinations}
