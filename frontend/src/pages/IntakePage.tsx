@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { DESTINATIONS, ORIGINS, INTERESTS } from '../lib/constants'
+import { DESTINATIONS as FALLBACK_DESTINATIONS, ORIGINS as FALLBACK_ORIGINS, INTERESTS } from '../lib/constants'
+import { fetchDestinations } from '../lib/api'
 import { Stepper } from '../components/intake/Stepper'
 import { FieldCard } from '../components/intake/FieldCard'
 import type { TripIntake } from '../types'
-import { Check, CalendarDays, Search, Info, ChevronDown, ArrowRight, Utensils as Restaurant, History, Building2, Music2, Palmtree as BeachAccess, Palette, Trees as Forest, ShoppingBag } from 'lucide-react'
+import { parseExactDate, formatExactDate, parseMonth, formatMonth } from '../lib/dates'
+import { Check, Info, ChevronDown, ArrowRight, Utensils as Restaurant, History, Building2, Music2, Palmtree as BeachAccess, Palette, Trees as Forest, ShoppingBag } from 'lucide-react'
 
 interface IntakePageProps {
   state: TripIntake
@@ -77,8 +80,41 @@ const chipSpring = {
 } as const
 
 export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps) {
-  const dest = DESTINATIONS.find(d => d.id === state.destination) ?? DESTINATIONS[0]
+  const [origins, setOrigins] = useState<string[]>([...FALLBACK_ORIGINS])
+  const [destinations, setDestinations] = useState<{ id: string; city: string; country: string; code: string; note: string }[]>(
+    FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))
+  )
+
+  useEffect(() => {
+    fetchDestinations('origin')
+      .then(data => setOrigins(data.map(d => d.city)))
+      .catch(() => {})
+    fetchDestinations('destination')
+      .then(data => setDestinations(data.map(d => ({ id: d.id, city: d.city, country: d.country ?? '', code: d.code, note: d.note ?? '' }))))
+      .catch(() => {})
+  }, [])
+
+  const dest = destinations.find(d => d.id === state.destination) ?? destinations[0]
   const pct = ((state.budgetGbp - 800) / (6000 - 800) * 100).toFixed(1)
+
+  const exact = parseExactDate(state.dateExact)
+  const [start, setStart] = useState(exact.start)
+  const [end, setEnd] = useState(exact.end)
+
+  const flex = parseMonth(state.dateMonth)
+  const [month, setMonth] = useState(flex)
+
+  function applyExact(newStart: string, newEnd: string) {
+    if (!newStart || !newEnd) return
+    const formatted = formatExactDate(newStart, newEnd)
+    if (formatted) set({ dateExact: formatted, dateLabel: formatted })
+  }
+
+  function applyFlex(newMonth: string) {
+    if (!newMonth) return
+    const formatted = formatMonth(newMonth)
+    if (formatted) set({ dateMonth: formatted, dateLabel: `Flexible · ${formatted}` })
+  }
 
   return (
     <div className="intake-scroll">
@@ -109,7 +145,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
           <motion.div variants={itemVariants}>
             <FieldCard icon="my_location" label="Flying from">
               <div className="seg-select">
-                {ORIGINS.slice(0, 3).map(o => (
+                {origins.slice(0, 3).map(o => (
                   <motion.button
                     key={o}
                     type="button"
@@ -122,7 +158,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                 ))}
                 <div className="select-wrap">
                   <select value={state.origin} onChange={e => set({ origin: e.target.value })}>
-                    {ORIGINS.map(o => <option key={o} value={o}>{o}</option>)}
+                    {origins.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                   <ChevronDown size={18} />
                 </div>
@@ -133,7 +169,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
           <motion.div variants={itemVariants}>
             <FieldCard icon="travel_explore" label="Where to">
               <div className="dest-row">
-                {DESTINATIONS.map(d => (
+                {destinations.map(d => (
                   <motion.button
                     key={d.id}
                     type="button"
@@ -172,9 +208,44 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                   Flexible — best value
                 </motion.button>
               </div>
-              {state.dateMode === 'exact'
-                ? <div className="date-value"><CalendarDays size={19} />{state.dateExact}</div>
-                : <div className="date-value"><Search size={19} />We'll find the cheapest stretch in {state.dateMonth}</div>}
+              {state.dateMode === 'exact' ? (
+                <div className="date-inputs">
+                  <label className="date-field">
+                    <span>Departure</span>
+                    <input
+                      type="date"
+                      value={start}
+                      onChange={e => {
+                        setStart(e.target.value)
+                        applyExact(e.target.value, end)
+                      }}
+                    />
+                  </label>
+                  <label className="date-field">
+                    <span>Return</span>
+                    <input
+                      type="date"
+                      value={end}
+                      onChange={e => {
+                        setEnd(e.target.value)
+                        applyExact(start, e.target.value)
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <label className="date-field">
+                  <span>Month</span>
+                  <input
+                    type="month"
+                    value={month}
+                    onChange={e => {
+                      setMonth(e.target.value)
+                      applyFlex(e.target.value)
+                    }}
+                  />
+                </label>
+              )}
             </FieldCard>
           </motion.div>
 

@@ -4,6 +4,8 @@ import { Chat } from '../components/chat/Chat'
 import { ItineraryPanel } from '../components/itinerary/ItineraryPanel'
 import { useAgentStream, appendTextDelta, addToolBlock, markToolDone, markStreamingDone } from '../hooks/useAgentStream'
 import { diffIntake } from '../lib/diffIntake'
+import { fetchDestinations } from '../lib/api'
+import { DESTINATIONS as FALLBACK_DESTINATIONS, ORIGINS as FALLBACK_ORIGINS } from '../lib/constants'
 import type { TripIntake, ItineraryState, ChatMessage, Block } from '../types'
 
 interface PlanningPageProps {
@@ -22,11 +24,26 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const [busy, setBusy] = useState(false)
   const [booked, setBooked] = useState(false)
   const [displayTotal, setDisplayTotal] = useState<number | null>(null)
+  const busyRef = useRef(false)
   const sentInitial = useRef(false)
   const prevIntakeRef = useRef<TripIntake>(intake)
   const userChangedRef = useRef(false)
   const pendingChangeRef = useRef<string | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [origins, setOrigins] = useState<string[]>([...FALLBACK_ORIGINS])
+  const [destinations, setDestinations] = useState<{ id: string; city: string; country: string; code: string; note: string }[]>(
+    FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))
+  )
+
+  useEffect(() => {
+    fetchDestinations('origin')
+      .then(data => setOrigins(data.map(d => d.city)))
+      .catch(() => {})
+    fetchDestinations('destination')
+      .then(data => setDestinations(data.map(d => ({ id: d.id, city: d.city, country: d.country ?? '', code: d.code, note: d.note ?? '' }))))
+      .catch(() => {})
+  }, [])
 
   const userSetIntake = useCallback((partial: Partial<TripIntake>) => {
     userChangedRef.current = true
@@ -59,6 +76,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
         return []
       })
       setBusy(false)
+      busyRef.current = false
       if (pendingChangeRef.current) {
         const msg = pendingChangeRef.current
         pendingChangeRef.current = null
@@ -70,6 +88,8 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
     },
     onError: (message: string) => {
       console.error('Agent error:', message)
+      setBusy(false)
+      busyRef.current = false
     },
   }), [])
 
@@ -90,7 +110,8 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const { send: streamSend } = useAgentStream(tripId, stableCallbacks())
 
   function handleSend(text: string) {
-    if (busy) return
+    if (busyRef.current) return
+    busyRef.current = true
     setBusy(true)
     setActiveBlocks([])
     const id = crypto.randomUUID()
@@ -116,7 +137,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
       return
     }
 
-    if (busy) {
+    if (busyRef.current) {
       const diff = diffIntake(prevIntakeRef.current, intake)
       if (diff) pendingChangeRef.current = diff
       prevIntakeRef.current = intake
@@ -153,6 +174,8 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
         total={total}
         onBook={() => setBooked(true)}
         booked={booked}
+        origins={origins}
+        destinations={destinations}
       />
       <div className="workspace">
         <Chat messages={messages} activeBlocks={activeBlocks} busy={busy} onSend={handleSend} />
