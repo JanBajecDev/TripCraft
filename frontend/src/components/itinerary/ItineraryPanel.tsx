@@ -1,21 +1,22 @@
 import type { ItineraryState, FlightLeg, TripIntake } from '../../types'
+import { Star as StarIcon, Map, Plane, Hotel, Utensils, Music2, Car, ReceiptIcon as ReceiptLong, CheckCircle, ArrowRight } from 'lucide-react'
 
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="stars" title={`${rating} / 5`}>
-      <span className="material-symbols-outlined filled">star</span>
+      <StarIcon size={16} className="fill-current" />
       <strong>{rating.toFixed(1)}</strong>
     </span>
   )
 }
 
 function Section({ icon, title, source, color, children, delay = 0 }: {
-  icon: string; title: string; source?: string; color?: string; children: React.ReactNode; delay?: number
+  icon: React.ReactNode; title: string; source?: string; color?: string; children: React.ReactNode; delay?: number
 }) {
   return (
     <section className="it-section" style={{ animationDelay: delay + 'ms' }}>
       <div className="it-head">
-        <span className={`it-ico ${color ?? ''}`}><span className="material-symbols-outlined">{icon}</span></span>
+        <span className={`it-ico ${color ?? ''}`}>{icon}</span>
         <h3>{title}</h3>
         {source && <span className="it-source">via {source}</span>}
       </div>
@@ -31,7 +32,7 @@ function FlightLegRow({ leg, dir }: { leg: FlightLeg; dir: string }) {
       <div className="leg-main">
         <div className="leg-times">
           <strong>{leg.dep}</strong>
-          <span className="leg-line"><span className="material-symbols-outlined">flight</span></span>
+          <span className="leg-line"><Plane size={15} /></span>
           <strong>{leg.arr}</strong>
         </div>
         <div className="leg-route">{leg.from} → {leg.to} · {leg.date}</div>
@@ -74,19 +75,19 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
           <span className="it-progress">Drafting… {revealed.length}/{TOTAL_SLOTS}</span>
         )}
         {revealed.length >= TOTAL_SLOTS && (
-          <span className="it-progress done"><span className="material-symbols-outlined">check_circle</span>Ready</span>
+          <span className="it-progress done"><CheckCircle size={17} />Ready</span>
         )}
       </div>
 
       {empty && (
         <div className="it-empty">
-          <span className="material-symbols-outlined">map</span>
+          <Map size={46} />
           <p>Your flights, stay, day plan, places to eat and events will appear here as TripCraft builds them.</p>
         </div>
       )}
 
       {itinerary.flights && (
-        <Section icon="flight" title="Flights" source="Google Flights" color="p">
+        <Section icon={<Plane size={18} />} title="Flights" source="Google Flights" color="p">
           <div className="card flight-card">
             <FlightLegRow leg={itinerary.flights.out} dir="Outbound" />
             <div className="leg-div" />
@@ -103,9 +104,9 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       {itinerary.hotel && (
-        <Section icon="hotel" title="Where you'll stay" source="Google Hotels" color="s">
+        <Section icon={<Hotel size={18} />} title="Where you'll stay" source="Google Hotels" color="s">
           <div className="card hotel-card">
-            <div className="hotel-thumb"><span className="material-symbols-outlined">apartment</span></div>
+            <div className="hotel-thumb"><Hotel size={34} /></div>
             <div className="hotel-body">
               <div className="hotel-top">
                 <strong>{itinerary.hotel.name}</strong>
@@ -124,7 +125,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       {itinerary.days && (
-        <Section icon="map" title="Day by day" source="TripAdvisor" color="t">
+        <Section icon={<Map size={18} />} title="Day by day" source="TripAdvisor" color="t">
           <div className="days">
             {itinerary.days.map(d => (
               <div className="day" key={d.n}>
@@ -136,7 +137,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
                   {d.items.map((it, i) => (
                     <li key={i} className={it.added ? 'added' : ''}>
                       <span className="di-time">{it.time}</span>
-                      <span className="material-symbols-outlined di-ico">{it.icon}</span>
+                      <ArrowRight size={17} className="di-ico" />
                       <span>{it.text}{it.added && <span className="added-tag">added</span>}</span>
                     </li>
                   ))}
@@ -148,7 +149,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       {itinerary.restaurants && (
-        <Section icon="restaurant" title="Where to eat" source="Yelp + TripAdvisor" color="p">
+        <Section icon={<Utensils size={18} />} title="Where to eat" source="Yelp + TripAdvisor" color="p">
           <div className="list">
             {itinerary.restaurants.map((r, i) => (
               <div className={`row-card${r.added ? ' added' : ''}`} key={i}>
@@ -165,11 +166,11 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       {itinerary.events && (
-        <Section icon="festival" title="On while you're there" source="Google Events" color="t">
+        <Section icon={<Music2 size={18} />} title="On while you're there" source="Google Events" color="t">
           <div className="list">
             {itinerary.events.map((e, i) => (
               <div className="row-card" key={i}>
-                <span className="ev-ico"><span className="material-symbols-outlined">{e.icon}</span></span>
+                <span className="ev-ico"><Music2 size={18} /></span>
                 <div className="rc-main">
                   <div className="rc-top"><strong>{e.name}</strong></div>
                   <div className="rc-sub">{e.date} · {e.where}</div>
@@ -183,7 +184,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       {itinerary.car && (
-        <Section icon="directions_car" title="Rental car" color="s">
+        <Section icon={<Car size={18} />} title="Rental car" color="s">
           <div className="card car-card">
             <div className="rc-main">
               <div className="rc-top"><strong>{itinerary.car.name}</strong></div>
@@ -196,7 +197,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       {itinerary.budget && revealed.length >= TOTAL_SLOTS && (
-        <Section icon="receipt_long" title="Budget" color="p">
+        <Section icon={<ReceiptLong size={18} />} title="Budget" color="p">
           <div className="card budget-card">
             {itinerary.budget.lines.map((l, i) => (
               <div className="bl" key={i}>
@@ -213,8 +214,8 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
             </div>
             <div className="budget-msg">
               {itinerary.budget.total <= state.budgetGbp
-                ? <><span className="material-symbols-outlined">check_circle</span>£{(state.budgetGbp - itinerary.budget.total).toLocaleString()} under your £{state.budgetGbp.toLocaleString()} budget</>
-                : <><span className="material-symbols-outlined">error</span>£{(itinerary.budget.total - state.budgetGbp).toLocaleString()} over budget</>}
+                ? <><CheckCircle size={16} />£{(state.budgetGbp - itinerary.budget.total).toLocaleString()} under your £{state.budgetGbp.toLocaleString()} budget</>
+                : <><span className="text-error">Over by £{(itinerary.budget.total - state.budgetGbp).toLocaleString()}</span></>}
             </div>
           </div>
         </Section>

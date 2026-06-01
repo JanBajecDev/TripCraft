@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Check, Bot, ArrowUp } from 'lucide-react'
 import { TOOL_LABELS } from '../../lib/constants'
 import type { ChatMessage, Block } from '../../types'
 
@@ -9,7 +10,7 @@ function ToolRow({ toolName, status }: { toolName: string; status: 'running' | '
       <span className="tool-spin">
         {status === 'running'
           ? <span className="spinner" />
-          : <span className="material-symbols-outlined">check</span>}
+          : <Check size={18} className="text-success" />}
       </span>
       <span className="tool-text">
         <span className="tool-api">{label}</span>
@@ -89,7 +90,7 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
             }
             return (
               <div key={m.id} className="msg assistant">
-                <div className="msg-avatar"><span className="material-symbols-outlined">explore</span></div>
+                <div className="msg-avatar"><Bot size={20} /></div>
                 <div className="msg-body">
                   {m.blocks.map((b, i) => <BlockRenderer key={i} block={b} onSend={send} busy={busy} />)}
                 </div>
@@ -100,7 +101,7 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
           {/* In-flight assistant message */}
           {(activeBlocks.length > 0 || showThinking) && (
             <div className="msg assistant">
-              <div className="msg-avatar"><span className="material-symbols-outlined">explore</span></div>
+              <div className="msg-avatar"><Bot size={20} /></div>
               <div className="msg-body">
                 {showThinking && (
                   <div className="thinking"><span className="dot" /><span className="dot" /><span className="dot" /></div>
@@ -124,7 +125,7 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
             disabled={busy}
           />
           <button type="button" className="send-btn" disabled={busy || !draft.trim()} onClick={() => send()} aria-label="Send">
-            <span className="material-symbols-outlined">arrow_upward</span>
+            <ArrowUp size={20} />
           </button>
         </div>
         <p className="composer-note">TripCraft can plan, swap and re-cost in real time. Always confirm prices before booking.</p>

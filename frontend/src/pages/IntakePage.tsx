@@ -2,11 +2,24 @@ import { DESTINATIONS, ORIGINS, INTERESTS } from '../lib/constants'
 import { Stepper } from '../components/intake/Stepper'
 import { FieldCard } from '../components/intake/FieldCard'
 import type { TripIntake } from '../types'
+import { Check, CalendarDays, Search, Info, ChevronDown, ArrowRight, Utensils as Restaurant, History, Building2, Music2, Palmtree as BeachAccess, Palette, Trees as Forest, ShoppingBag } from 'lucide-react'
 
 interface IntakePageProps {
   state: TripIntake
   set: (partial: Partial<TripIntake>) => void
   onSubmit: () => void
+}
+
+const iconMap: Record<string, React.ReactNode> = {
+  restaurant: <Restaurant size={17} />,
+  history_edu: <History size={17} />,
+  apartment: <Building2 size={17} />,
+  nightlife: <Music2 size={17} />,
+  beach_access: <BeachAccess size={17} />,
+  palette: <Palette size={17} />,
+  forest: <Forest size={17} />,
+  music_note: <Music2 size={17} />,
+  shopping_bag: <ShoppingBag size={17} />,
 }
 
 export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
@@ -32,7 +45,7 @@ export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
                 <select value={state.origin} onChange={e => set({ origin: e.target.value })}>
                   {ORIGINS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <span className="material-symbols-outlined">expand_more</span>
+                <ChevronDown size={18} />
               </div>
             </div>
           </FieldCard>
@@ -47,7 +60,7 @@ export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
                 </button>
               ))}
             </div>
-            <p className="field-note"><span className="material-symbols-outlined">info</span>{dest.note} · {dest.country}</p>
+            <p className="field-note"><Info size={15} />{dest.note} · {dest.country}</p>
           </FieldCard>
 
           <FieldCard icon="event" label="Dates">
@@ -56,8 +69,8 @@ export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
               <button type="button" className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`} onClick={() => set({ dateMode: 'flexible' })}>Flexible — best value</button>
             </div>
             {state.dateMode === 'exact'
-              ? <div className="date-value"><span className="material-symbols-outlined">calendar_month</span>{state.dateExact}</div>
-              : <div className="date-value"><span className="material-symbols-outlined">savings</span>We'll find the cheapest stretch in {state.dateMonth}</div>}
+              ? <div className="date-value"><CalendarDays size={19} />{state.dateExact}</div>
+              : <div className="date-value"><Search size={19} />We'll find the cheapest stretch in {state.dateMonth}</div>}
           </FieldCard>
 
           <FieldCard icon="schedule" label="Length of stay">
@@ -88,9 +101,9 @@ export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
                 return (
                   <button key={it.id} type="button" className={`interest-chip${on ? ' on' : ''}`}
                     onClick={() => set({ interests: on ? state.interests.filter(x => x !== it.id) : [...state.interests, it.id] })}>
-                    <span className="material-symbols-outlined">{it.icon}</span>
+                    {iconMap[it.icon]}
                     {it.label}
-                    {on && <span className="material-symbols-outlined check">check</span>}
+                    {on && <Check size={17} className="check" />}
                   </button>
                 )
               })}
@@ -101,7 +114,8 @@ export function IntakePage({ state, set, onSubmit }: IntakePageProps) {
         <div className="intake-cta">
           <button type="button" className="btn-primary lg" onClick={onSubmit} disabled={state.interests.length === 0}>
             Plan my trip
-            <span className="material-symbols-outlined">arrow_forward</span>
+            Plan my trip
+            <ArrowRight size={20} />
           </button>
           <p className="cta-note">Free to plan. You only book what you like.</p>
         </div>
