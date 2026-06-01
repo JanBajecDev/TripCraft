@@ -69,6 +69,14 @@ describe('diffIntake', () => {
     expect(result).toContain('July 1-8')
   })
 
+  it('describes a dateMode change from exact to flexible', () => {
+    const next = { ...base, dateMode: 'flexible' as const, dateMonth: 'July' }
+    const result = diffIntake(base, next)
+    expect(result).toContain('date')
+    expect(result).toContain('June 15-22')
+    expect(result).toContain('Flexible')
+  })
+
   it('describes multiple changes', () => {
     const next = { ...base, destination: 'lisbon', destCode: 'LIS', budgetGbp: 1500 }
     const result = diffIntake(base, next)

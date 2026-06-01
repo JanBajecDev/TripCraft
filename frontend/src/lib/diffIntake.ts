@@ -22,7 +22,7 @@ export function diffIntake(prev: TripIntake, next: TripIntake): string {
     changes.push({ label: 'destination', oldVal: destCity(prev.destination), newVal: destCity(next.destination) })
   }
 
-  if (prev.dateExact !== next.dateExact || prev.dateMonth !== next.dateMonth) {
+  if (prev.dateMode !== next.dateMode || prev.dateExact !== next.dateExact || prev.dateMonth !== next.dateMonth) {
     const oldDate = prev.dateMode === 'exact' ? prev.dateExact : `Flexible · ${prev.dateMonth}`
     const newDate = next.dateMode === 'exact' ? next.dateExact : `Flexible · ${next.dateMonth}`
     changes.push({ label: 'date', oldVal: oldDate, newVal: newDate })
@@ -34,7 +34,7 @@ export function diffIntake(prev: TripIntake, next: TripIntake): string {
 
   if (prev.budgetGbp !== next.budgetGbp) {
     const dir = next.budgetGbp > prev.budgetGbp ? 'increased' : 'decreased'
-    changes.push({ label: `budget ${dir}`, oldVal: `£${prev.budgetGbp.toLocaleString()}`, newVal: `£${next.budgetGbp.toLocaleString()}` })
+    changes.push({ label: `budget ${dir}`, oldVal: `£${prev.budgetGbp.toLocaleString('en-GB')}`, newVal: `£${next.budgetGbp.toLocaleString('en-GB')}` })
   }
 
   if (changes.length === 0) return ''
