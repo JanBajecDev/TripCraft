@@ -14,26 +14,19 @@ type MessageRow = InferSelectModel<typeof messages>
 type SseEvent = 'text' | 'tool_start' | 'tool_done' | 'itinerary_update' | 'suggestions' | 'done'
 type SendFn = (event: SseEvent, data: unknown) => void
 
-function parseStructuredBlocks(text: string, send: SendFn, emitted: Set<string>): void {
-  const jsonPattern = /\{"type":"(itinerary_update|suggestions)"[^}]*(?:\{[^}]*\}[^}]*)*\}/g
-  let match: RegExpExecArray | null
-  while ((match = jsonPattern.exec(text)) !== null) {
-    const raw = match[0]
-    if (emitted.has(raw)) continue
-    try {
-      const parsed = JSON.parse(raw) as { type: string; section?: string; data?: unknown; items?: string[] }
-      if (parsed.type === 'itinerary_update' && parsed.section) {
-        send('itinerary_update', { section: parsed.section, data: parsed.data })
-        emitted.add(raw)
-      } else if (parsed.type === 'suggestions' && parsed.items) {
-        send('suggestions', { items: parsed.items })
-        emitted.add(raw)
-      }
-    } catch {
-      // incomplete JSON yet — will retry on next chunk
-    }
-  }
+// Map emit tool names → itinerary section keys
+const EMIT_SECTION_MAP: Record<string, string> = {
+  emit_flights:     'flights',
+  emit_hotel:       'hotel',
+  emit_days:        'days',
+  emit_restaurants: 'restaurants',
+  emit_events:      'events',
+  emit_car:         'car',
+  emit_budget:      'budget',
 }
+
+// Tools that are internal emit helpers — don't show as tool rows in the chat
+const SILENT_TOOLS = new Set(Object.keys(EMIT_SECTION_MAP).concat(['emit_suggestions']))
 
 export async function runAgent({
   trip,
@@ -50,7 +43,6 @@ export async function runAgent({
   const model = openrouter(process.env.AI_MODEL ?? 'anthropic/claude-sonnet-4-5')
 
   let fullText = ''
-  const emittedBlocks = new Set<string>()
   const itineraryUpdates: Record<string, unknown> = {}
 
   const { fullStream } = streamText({
@@ -67,8 +59,16 @@ export async function runAgent({
       google_events:       tools.googleEventsTool,
       tripadvisor_search:  tools.tripadvisorSearchTool,
       tripadvisor_reviews: tools.tripadvisorReviewsTool,
+      emit_flights:        tools.emitFlightsTool,
+      emit_hotel:          tools.emitHotelTool,
+      emit_days:           tools.emitDaysTool,
+      emit_restaurants:    tools.emitRestaurantsTool,
+      emit_events:         tools.emitEventsTool,
+      emit_car:            tools.emitCarTool,
+      emit_budget:         tools.emitBudgetTool,
+      emit_suggestions:    tools.emitSuggestionsTool,
     },
-    maxSteps: 12,
+    maxSteps: 20,
   })
 
   for await (const chunk of fullStream) {
@@ -76,31 +76,39 @@ export async function runAgent({
       case 'text-delta':
         fullText += chunk.textDelta
         send('text', { delta: chunk.textDelta })
-        parseStructuredBlocks(fullText, send, emittedBlocks)
         break
 
-      case 'tool-call':
-        send('tool_start', { toolName: chunk.toolName, args: chunk.args })
-        break
+      case 'tool-call': {
+        const name = chunk.toolName
+        const args = chunk.args as Record<string, unknown>
 
-      case 'tool-result':
-        send('tool_done', { toolName: chunk.toolName })
+        if (EMIT_SECTION_MAP[name]) {
+          // Structured itinerary data — send to panel, don't show as tool row
+          const section = EMIT_SECTION_MAP[name]
+          const data = section === 'days' ? args.days
+            : section === 'restaurants' ? args.restaurants
+            : section === 'events' ? args.events
+            : args
+          send('itinerary_update', { section, data })
+          itineraryUpdates[section === 'car' ? 'carRental' : section] = data
+        } else if (name === 'emit_suggestions') {
+          send('suggestions', { items: args.items })
+        } else {
+          // Real API tool — show as spinning tool row
+          send('tool_start', { toolName: name })
+        }
         break
+      }
+
+      case 'tool-result': {
+        if (!SILENT_TOOLS.has(chunk.toolName)) {
+          send('tool_done', { toolName: chunk.toolName })
+        }
+        break
+      }
 
       case 'finish':
-        // persist assistant message
         await db.insert(messages).values({ tripId, role: 'assistant', content: fullText })
-
-        // extract itinerary sections from emitted blocks
-        for (const raw of emittedBlocks) {
-          try {
-            const parsed = JSON.parse(raw) as { type: string; section?: string; data?: unknown }
-            if (parsed.type === 'itinerary_update' && parsed.section) {
-              const col = parsed.section === 'car' ? 'carRental' : parsed.section
-              itineraryUpdates[col] = parsed.data
-            }
-          } catch { /* ignore */ }
-        }
 
         if (Object.keys(itineraryUpdates).length > 0) {
           await db.update(itinerary)
