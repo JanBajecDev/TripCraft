@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { IntakePage } from "./pages/IntakePage";
 import { PlanningPage } from "./pages/PlanningPage";
 import { createTrip } from "./lib/api";
@@ -70,40 +71,63 @@ export default function App() {
     }
   }
 
-  if (page === "planning" && tripId) {
-    return (
-      <PlanningPage
-        tripId={tripId}
-        intake={intake}
-        setIntake={setIntake}
-        theme={theme}
-        onToggleTheme={() =>
-          setTheme((t) => (t === "light" ? "dark" : "light"))
-        }
-        initialMessage={initialMessage}
-      />
-    );
-  }
+  const pageVariants = {
+    initial: { opacity: 0, y: 24 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } },
+    exit: { opacity: 0, y: -16, transition: { duration: 0.3, ease: "easeIn" as const } },
+  };
 
   return (
-    <div className="app">
-      {error && (
-        <div
-          style={{
-            padding: "12px 20px",
-            background: "var(--error-container)",
-            color: "var(--on-error-container)",
-            fontSize: 13,
-          }}
+    <AnimatePresence mode="wait">
+      {page === "planning" && tripId ? (
+        <motion.div
+          key="planning"
+          className="app"
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
         >
-          {error}
-        </div>
+          <PlanningPage
+            tripId={tripId}
+            intake={intake}
+            setIntake={setIntake}
+            theme={theme}
+            onToggleTheme={() =>
+              setTheme((t) => (t === "light" ? "dark" : "light"))
+            }
+            initialMessage={initialMessage}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="intake"
+          className="app"
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          {error && (
+            <div
+              style={{
+                padding: "12px 20px",
+                background: "var(--error-container)",
+                color: "var(--on-error-container)",
+                fontSize: 13,
+              }}
+            >
+              {error}
+            </div>
+          )}
+          <IntakePage
+            state={intake}
+            set={setIntake}
+            onSubmit={loading ? () => {} : handleSubmit}
+            isLoading={loading}
+          />
+        </motion.div>
       )}
-      <IntakePage
-        state={intake}
-        set={setIntake}
-        onSubmit={loading ? () => {} : handleSubmit}
-      />
-    </div>
+    </AnimatePresence>
   );
 }
