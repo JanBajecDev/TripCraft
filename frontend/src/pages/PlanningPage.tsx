@@ -3,6 +3,7 @@ import { SummaryBar } from '../components/summary/SummaryBar'
 import { Chat } from '../components/chat/Chat'
 import { ItineraryPanel } from '../components/itinerary/ItineraryPanel'
 import { useAgentStream, appendTextDelta, addToolBlock, markToolDone, markStreamingDone } from '../hooks/useAgentStream'
+import { diffIntake } from '../lib/diffIntake'
 import type { TripIntake, ItineraryState, ChatMessage, Block } from '../types'
 
 interface PlanningPageProps {
@@ -22,6 +23,15 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const [booked, setBooked] = useState(false)
   const [displayTotal, setDisplayTotal] = useState<number | null>(null)
   const sentInitial = useRef(false)
+  const prevIntakeRef = useRef<TripIntake>(intake)
+  const userChangedRef = useRef(false)
+  const pendingChangeRef = useRef<string | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const userSetIntake = useCallback((partial: Partial<TripIntake>) => {
+    userChangedRef.current = true
+    setIntake(partial)
+  }, [setIntake])
 
   const total = displayTotal ?? itinerary.budget?.total ?? 0
 
@@ -49,6 +59,14 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
         return []
       })
       setBusy(false)
+      if (pendingChangeRef.current) {
+        const msg = pendingChangeRef.current
+        pendingChangeRef.current = null
+        setTimeout(() => {
+          setItinerary({})
+          handleSend(msg)
+        }, 100)
+      }
     },
     onError: (message: string) => {
       console.error('Agent error:', message)
@@ -87,11 +105,48 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
     handleSend(initialMessage)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!userChangedRef.current) {
+      prevIntakeRef.current = intake
+      return
+    }
+
+    if (Object.keys(itinerary).length === 0) {
+      prevIntakeRef.current = intake
+      return
+    }
+
+    if (busy) {
+      const diff = diffIntake(prevIntakeRef.current, intake)
+      if (diff) pendingChangeRef.current = diff
+      prevIntakeRef.current = intake
+      userChangedRef.current = false
+      return
+    }
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+
+    debounceTimerRef.current = setTimeout(() => {
+      const diff = diffIntake(prevIntakeRef.current, intake)
+      prevIntakeRef.current = intake
+      userChangedRef.current = false
+
+      if (diff) {
+        setItinerary({})
+        handleSend(diff)
+      }
+    }, 500)
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
+  }, [intake]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="app">
       <SummaryBar
         state={intake}
-        set={setIntake}
+        set={userSetIntake}
         theme={theme}
         onToggleTheme={onToggleTheme}
         tripReady={Object.keys(itinerary).length > 0}
