@@ -2,10 +2,23 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+
+export const destinations = pgTable("destinations", {
+  id: text("id").notNull(),
+  city: text("city").notNull(),
+  country: text("country"),
+  code: text("code").notNull(),
+  note: text("note"),
+  type: text("type").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.id, table.type] }),
+]);
 
 export const trips = pgTable("trips", {
   id: uuid("id").primaryKey().defaultRandom(),

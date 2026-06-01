@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import destinations from './routes/destinations'
 import trips from './routes/trips'
 import photo from './routes/photo'
 
@@ -15,6 +16,7 @@ app.use('*', cors({
 
 app.route('/api/trips', trips)
 app.route('/api/photo', photo)
+app.route('/api/destinations', destinations)
 
 app.get('/health', (c) => c.json({ ok: true }))
 

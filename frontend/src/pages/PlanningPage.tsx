@@ -5,6 +5,7 @@ import { ItineraryPanel } from '../components/itinerary/ItineraryPanel'
 import { useAgentStream, appendTextDelta, addToolBlock, markToolDone, markStreamingDone } from '../hooks/useAgentStream'
 import { diffIntake } from '../lib/diffIntake'
 import { fetchDestinations } from '../lib/api'
+import type { CityItem } from '../components/intake/CitySearch'
 import { DESTINATIONS as FALLBACK_DESTINATIONS, ORIGINS as FALLBACK_ORIGINS } from '../lib/constants'
 import type { TripIntake, ItineraryState, ChatMessage, Block } from '../types'
 
@@ -31,14 +32,16 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const pendingChangeRef = useRef<string | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [origins, setOrigins] = useState<string[]>([...FALLBACK_ORIGINS])
-  const [destinations, setDestinations] = useState<{ id: string; city: string; country: string; code: string; note: string }[]>(
+  const [origins, setOrigins] = useState<CityItem[]>(
+    FALLBACK_ORIGINS.map((o, i) => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
+  )
+  const [destinations, setDestinations] = useState<CityItem[]>(
     FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))
   )
 
   useEffect(() => {
     fetchDestinations('origin')
-      .then(data => setOrigins(data.map(d => d.city)))
+      .then(data => setOrigins(data.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))))
       .catch(() => {})
     fetchDestinations('destination')
       .then(data => setDestinations(data.map(d => ({ id: d.id, city: d.city, country: d.country ?? '', code: d.code, note: d.note ?? '' }))))

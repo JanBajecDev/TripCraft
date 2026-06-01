@@ -27,3 +27,20 @@ export async function getTrip(tripId: string) {
   if (!res.ok) throw new Error(`Trip not found: ${res.status}`)
   return res.json()
 }
+
+export interface DestinationOption {
+  id: string
+  city: string
+  country: string | null
+  code: string
+  note: string | null
+  type: 'origin' | 'destination'
+  sortOrder: number
+}
+
+export async function fetchDestinations(type?: 'origin' | 'destination'): Promise<DestinationOption[]> {
+  const params = type ? `?type=${type}` : ''
+  const res = await fetch(`${BASE}/destinations${params}`)
+  if (!res.ok) throw new Error(`Failed to fetch destinations: ${res.status}`)
+  return res.json()
+}

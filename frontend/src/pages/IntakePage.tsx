@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { DESTINATIONS as FALLBACK_DESTINATIONS, ORIGINS as FALLBACK_ORIGINS, INTERESTS } from '../lib/constants'
 import { fetchDestinations } from '../lib/api'
+import { CitySearch, type CityItem } from '../components/intake/CitySearch'
 import { Stepper } from '../components/intake/Stepper'
 import { FieldCard } from '../components/intake/FieldCard'
 import type { TripIntake } from '../types'
 import { parseExactDate, formatExactDate, parseMonth, formatMonth } from '../lib/dates'
-import { Check, Info, ChevronDown, ArrowRight, Utensils as Restaurant, History, Building2, Music2, Palmtree as BeachAccess, Palette, Trees as Forest, ShoppingBag } from 'lucide-react'
+import { Check, Info, ArrowRight, Utensils as Restaurant, History, Building2, Music2, Palmtree as BeachAccess, Palette, Trees as Forest, ShoppingBag } from 'lucide-react'
 
 interface IntakePageProps {
   state: TripIntake
@@ -80,14 +81,16 @@ const chipSpring = {
 } as const
 
 export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps) {
-  const [origins, setOrigins] = useState<string[]>([...FALLBACK_ORIGINS])
-  const [destinations, setDestinations] = useState<{ id: string; city: string; country: string; code: string; note: string }[]>(
+  const [origins, setOrigins] = useState<CityItem[]>(
+    FALLBACK_ORIGINS.map((o, i) => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
+  )
+  const [destinations, setDestinations] = useState<CityItem[]>(
     FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))
   )
 
   useEffect(() => {
     fetchDestinations('origin')
-      .then(data => setOrigins(data.map(d => d.city)))
+      .then(data => setOrigins(data.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))))
       .catch(() => {})
     fetchDestinations('destination')
       .then(data => setDestinations(data.map(d => ({ id: d.id, city: d.city, country: d.country ?? '', code: d.code, note: d.note ?? '' }))))
@@ -144,47 +147,26 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
         >
           <motion.div variants={itemVariants}>
             <FieldCard icon="my_location" label="Flying from">
-              <div className="seg-select">
-                {origins.slice(0, 3).map(o => (
-                  <motion.button
-                    key={o}
-                    type="button"
-                    className={`seg${state.origin === o ? ' on' : ''}`}
-                    onClick={() => set({ origin: o })}
-                    whileTap={{ scale: 0.96 }}
-                  >
-                    {o}
-                  </motion.button>
-                ))}
-                <div className="select-wrap">
-                  <select value={state.origin} onChange={e => set({ origin: e.target.value })}>
-                    {origins.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                  <ChevronDown size={18} />
-                </div>
-              </div>
+              <CitySearch
+                items={origins}
+                value={state.origin}
+                onSelect={item => set({ origin: item.city })}
+                placeholder="Search departure city..."
+                label="Flying from"
+              />
             </FieldCard>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <FieldCard icon="travel_explore" label="Where to">
-              <div className="dest-row">
-                {destinations.map(d => (
-                  <motion.button
-                    key={d.id}
-                    type="button"
-                    className={`dest-chip${state.destination === d.id ? ' on' : ''}`}
-                    onClick={() => set({ destination: d.id, destCode: d.code })}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={chipSpring}
-                  >
-                    <span className="dest-city">{d.city}</span>
-                    <span className="dest-code">{d.code}</span>
-                  </motion.button>
-                ))}
-              </div>
-              <p className="field-note"><Info size={15} />{dest.note} · {dest.country}</p>
+              <CitySearch
+                items={destinations}
+                value={state.destination}
+                onSelect={item => set({ destination: item.id, destCode: item.code })}
+                placeholder="Search destination city..."
+                label="Where to"
+              />
+              {dest && <p className="field-note"><Info size={15} />{dest.note} · {dest.country}</p>}
             </FieldCard>
           </motion.div>
 

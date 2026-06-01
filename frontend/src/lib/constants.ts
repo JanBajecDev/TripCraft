@@ -4,9 +4,16 @@ export const DESTINATIONS = [
   { id: 'rome',       city: 'Rome',       country: 'Italy',    code: 'FCO', note: 'Ancient history',        photo: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=900&q=80' },
   { id: 'athens',     city: 'Athens',     country: 'Greece',   code: 'ATH', note: 'Islands nearby',         photo: 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=900&q=80' },
   { id: 'copenhagen', city: 'Copenhagen', country: 'Denmark',  code: 'CPH', note: 'Design + food',          photo: 'https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=900&q=80' },
+  { id: 'berlin', city: 'Berlin', country: 'Germany', code: 'BER', note: 'Art + nightlife', photo: 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=900&q=80' },
+  { id: 'prague', city: 'Prague', country: 'Czechia', code: 'PRG', note: 'Fairy-tale old town', photo: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=900&q=80' },
+  { id: 'vienna', city: 'Vienna', country: 'Austria', code: 'VIE', note: 'Music + cafés', photo: 'https://images.unsplash.com/photo-1516550893923-42d28e5677af?w=900&q=80' },
+  { id: 'amsterdam', city: 'Amsterdam', country: 'Netherlands', code: 'AMS', note: 'Canals + culture', photo: 'https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=900&q=80' },
+  { id: 'dubrovnik', city: 'Dubrovnik', country: 'Croatia', code: 'DBV', note: 'Adriatic gem', photo: 'https://images.unsplash.com/photo-1523531294919-4bcd7c65e216?w=900&q=80' },
+  { id: 'santorini', city: 'Santorini', country: 'Greece', code: 'JTR', note: 'Sunsets + caldera', photo: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=900&q=80' },
+  { id: 'nice', city: 'Nice', country: 'France', code: 'NCE', note: "Côte d'Azur charm", photo: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=900&q=80' },
 ] as const
 
-export const ORIGINS = ['London', 'Manchester', 'Edinburgh', 'Dublin', 'Paris', 'Amsterdam'] as const
+export const ORIGINS = ['London', 'Manchester', 'Edinburgh', 'Dublin', 'Paris', 'Amsterdam', 'Berlin', 'Zurich', 'Vienna', 'Madrid', 'Milan', 'Prague'] as const
 
 export const INTERESTS = [
   { id: 'food', label: 'Food & wine', icon: 'restaurant' },
