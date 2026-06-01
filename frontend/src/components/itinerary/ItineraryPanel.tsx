@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import type { ItineraryState, FlightLeg, TripIntake } from '../../types'
+import type { ItineraryState, FlightLeg, TripIntake, HotelOption } from '../../types'
 import { Star as StarIcon, Map, Plane, Hotel, Utensils, Music2, Car, CheckCircle, ExternalLink, Receipt } from 'lucide-react'
 import { DESTINATIONS } from '../../lib/constants'
 
@@ -114,21 +114,21 @@ function googleSearch(q: string) {
   return `https://www.google.com/search?q=${encodeURIComponent(q)}`
 }
 
-function ExternalCard({ href, children, className = '' }: { href: string; children: React.ReactNode; className?: string }) {
+function ExternalCard({ href, children, className = '', style }: { href: string; children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       className={className}
-      style={{ textDecoration: 'none', color: 'inherit' }}
+      style={{ textDecoration: 'none', color: 'inherit', ...style }}
     >
       {children}
     </a>
   )
 }
 
-function HotelCard({ hotel, travellers }: { hotel: NonNullable<ItineraryState['hotel']>; travellers: number }) {
+function HotelCard({ hotel }: { hotel: HotelOption }) {
   // Always fetch a Google Images fallback — used if the SerpAPI thumbnail is broken
   const fallbackPhoto = usePhoto(`${hotel.name} ${hotel.area} hotel`)
   const [imgSrc, setImgSrc] = useState<string | null>(hotel.thumbnail ?? fallbackPhoto)
@@ -354,7 +354,7 @@ export function ItineraryPanel({ itinerary, state, onTotalChange }: ItineraryPan
               icon={<Hotel size={18} />} title="Where you'll stay" source="Google Hotels" color="s" key="hotel" delay={80}
               nav={<OptionNav idx={hotelIdx} total={opts.length} onPrev={() => setHotelIdx(i => i - 1)} onNext={() => setHotelIdx(i => i + 1)} />}
             >
-              <HotelCard key={h.name} hotel={h} travellers={state.travellers} />
+              <HotelCard key={h.name} hotel={h} />
             </Section>
           )
         })()}

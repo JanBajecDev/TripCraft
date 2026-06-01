@@ -115,7 +115,7 @@ const chipSpring = {
 
 export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps) {
   const [origins, setOrigins] = useState<CityItem[]>(
-    FALLBACK_ORIGINS.map((o, i) => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
+    FALLBACK_ORIGINS.map(o => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
   )
   const [destinations, setDestinations] = useState<CityItem[]>(
     FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))

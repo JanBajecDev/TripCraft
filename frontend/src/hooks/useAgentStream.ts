@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { Block } from '../types'
+import type { AssistantMessage, Block } from '../types'
 
 interface StreamCallbacks {
   onTextDelta: (delta: string) => void
@@ -105,4 +105,24 @@ export function markToolDone(blocks: Block[], toolName: string): Block[] {
       ? { ...b, status: 'done' as const }
       : b
   )
+}
+
+export function createAssistantMessage(id: string): AssistantMessage {
+  return { id, role: 'assistant', blocks: [] }
+}
+
+export function appendTextDeltaToMessage(message: AssistantMessage, delta: string): AssistantMessage {
+  return { ...message, blocks: appendTextDelta(message.blocks, delta) }
+}
+
+export function markStreamingDoneForMessage(message: AssistantMessage): AssistantMessage {
+  return { ...message, blocks: markStreamingDone(message.blocks) }
+}
+
+export function addToolBlockToMessage(message: AssistantMessage, toolName: string, detail?: string): AssistantMessage {
+  return { ...message, blocks: addToolBlock(message.blocks, toolName, detail) }
+}
+
+export function markToolDoneForMessage(message: AssistantMessage, toolName: string): AssistantMessage {
+  return { ...message, blocks: markToolDone(message.blocks, toolName) }
 }

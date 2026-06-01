@@ -3,7 +3,7 @@ import type { ChangeEvent, KeyboardEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Bot, ArrowUp } from 'lucide-react'
 import { TOOL_LABELS, TOOL_PHRASES, BETWEEN_TOOL_PHRASES } from '../../lib/constants'
-import type { ChatMessage, Block } from '../../types'
+import type { AssistantMessage, ChatMessage, Block } from '../../types'
 
 const springTransition = {
   type: 'spring',
@@ -53,8 +53,40 @@ function StatusLine({ text }: { text: string }) {
   )
 }
 
-function ToolRow({ toolName, detail, status }: { toolName: string; detail?: string; status: 'running' | 'done' }) {
+function ToolRow({
+  toolName,
+  detail,
+  status,
+  animate = true,
+}: {
+  toolName: string
+  detail?: string
+  status: 'running' | 'done'
+  animate?: boolean
+}) {
   const label = TOOL_LABELS[toolName] ?? toolName
+
+  if (!animate) {
+    return (
+      <div className={`tool-row ${status}`}>
+        <span className="tool-spin">
+          {status === 'running'
+            ? <motion.span
+                className="spinner"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
+              />
+            : <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Check size={16} />
+              </span>}
+        </span>
+        <span className="tool-text">
+          <span className="tool-api">{label}</span>
+          {detail ?? (status === 'running' ? 'Searching…' : 'Done')}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <motion.div
@@ -87,6 +119,12 @@ function ToolRow({ toolName, detail, status }: { toolName: string; detail?: stri
   )
 }
 
+function displayBlocks(blocks: Block[]) {
+  const nonTool = blocks.filter(b => b.type !== 'tool')
+  const lastSugIdx = nonTool.map((b, i) => b.type === 'suggestions' ? i : -1).filter(i => i >= 0).at(-1)
+  return nonTool.filter((b, i) => b.type !== 'suggestions' || i === lastSugIdx)
+}
+
 function renderMarkdown(text: string): React.ReactNode[] {
   // Split on **bold** and *italic*, render inline
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
@@ -97,7 +135,17 @@ function renderMarkdown(text: string): React.ReactNode[] {
   })
 }
 
-function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: string) => void; busy: boolean }) {
+function BlockRenderer({
+  block,
+  onSend,
+  busy,
+  animate = true,
+}: {
+  block: Block
+  onSend: (text: string) => void
+  busy: boolean
+  animate?: boolean
+}) {
   if (block.type === 'text') {
     // Split into paragraphs on double newlines
     const paragraphs = block.text.split(/\n\n+/)
@@ -117,10 +165,28 @@ function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: s
   }
 
   if (block.type === 'tool') {
-    return <ToolRow toolName={block.toolName} detail={block.detail} status={block.status} />
+    return <ToolRow toolName={block.toolName} detail={block.detail} status={block.status} animate={animate} />
   }
 
   if (block.type === 'suggestions') {
+    if (!animate) {
+      return (
+        <div className="suggestions">
+          {block.items.map(s => (
+            <button
+              key={s}
+              type="button"
+              className="suggest-chip"
+              disabled={busy}
+              onClick={() => onSend(s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )
+    }
+
     return (
       <motion.div
         className="suggestions"
@@ -135,11 +201,11 @@ function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: s
             className="suggest-chip"
             disabled={busy}
             onClick={() => onSend(s)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06, duration: 0.3, ease: 'easeOut' }}
-            whileHover={{ scale: 1.04, y: -1 }}
-            whileTap={{ scale: 0.96 }}
+            initial={animate ? { opacity: 0, y: 8 } : false}
+            animate={animate ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+            transition={animate ? { delay: i * 0.06, duration: 0.3, ease: 'easeOut' } : { duration: 0 }}
+            whileHover={animate ? { scale: 1.04, y: -1 } : undefined}
+            whileTap={animate ? { scale: 0.96 } : undefined}
           >
             {s}
           </motion.button>
@@ -151,9 +217,42 @@ function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: s
   return null
 }
 
+function AssistantBubble({
+  message,
+  onSend,
+  busy,
+  animate,
+  statusText,
+}: {
+  message: AssistantMessage
+  onSend: (text: string) => void
+  busy: boolean
+  animate: boolean
+  statusText: string | null
+}) {
+  const blocks = displayBlocks(message.blocks)
+  return (
+    <motion.div
+      className="msg assistant"
+      variants={messageVariants.assistant}
+      initial={animate ? 'hidden' : false}
+      animate={animate ? 'visible' : false}
+      layout={false}
+    >
+      <div className="msg-avatar"><Bot size={20} /></div>
+      <div className="msg-body">
+        {statusText && <StatusLine text={statusText} />}
+        {blocks.map((block, i) => (
+          <BlockRenderer key={i} block={block} onSend={onSend} busy={busy} animate={false} />
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
 interface ChatProps {
   messages: ChatMessage[]
-  activeBlocks: Block[]
+  liveMessage: AssistantMessage | null
   busy: boolean
   onSend: (text: string) => void
 }
@@ -169,25 +268,18 @@ const messageVariants = {
   },
 }
 
-export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
+export function Chat({ messages, liveMessage, busy, onSend }: ChatProps) {
   const [draft, setDraft] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
-  const statusText = useStatusText(activeBlocks, busy)
-  const showThinking = busy && activeBlocks.length === 0
-
-  // In-flight view: hide tool rows (status line handles those), keep last suggestions only
-  const displayActiveBlocks = (() => {
-    const nonTool = activeBlocks.filter(b => b.type !== 'tool')
-    const lastSugIdx = nonTool.map((b, i) => b.type === 'suggestions' ? i : -1).filter(i => i >= 0).at(-1)
-    return nonTool.filter((b, i) => b.type !== 'suggestions' || i === lastSugIdx)
-  })()
+  const statusText = useStatusText(liveMessage?.blocks ?? [], busy)
+  const showThinking = busy && !liveMessage
 
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages, activeBlocks, busy])
+  }, [messages, liveMessage, busy])
 
   function send(text?: string) {
     const value = (text != null ? text : draft).trim()
@@ -231,13 +323,6 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
                 )
               }
 
-              // Committed messages: skip tool rows, deduplicate suggestions (keep last only)
-              const displayBlocks = (() => {
-                const nonTool = m.blocks.filter(b => b.type !== 'tool')
-                const lastSugIdx = nonTool.map((b, i) => b.type === 'suggestions' ? i : -1).filter(i => i >= 0).at(-1)
-                return nonTool.filter((b, i) => b.type !== 'suggestions' || i === lastSugIdx)
-              })()
-
               return (
                 <motion.div
                   key={m.id}
@@ -249,33 +334,32 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
                 >
                   <div className="msg-avatar"><Bot size={20} /></div>
                   <div className="msg-body">
-                    {displayBlocks.map((block, i) => (
+                    {displayBlocks(m.blocks).map((block, i) => (
                       <BlockRenderer key={i} block={block} onSend={send} busy={busy} />
                     ))}
                   </div>
                 </motion.div>
               )
             })}
-
-            {(showThinking || activeBlocks.length > 0) && (
-              <motion.div
-                key="in-flight"
-                className="msg assistant"
-                variants={messageVariants.assistant}
-                initial="hidden"
-                animate="visible"
-                layout
-              >
-                <div className="msg-avatar"><Bot size={20} /></div>
-                <div className="msg-body">
-                  {statusText && <StatusLine text={statusText} />}
-                  {displayActiveBlocks.map((block, i) => (
-                    <BlockRenderer key={i} block={block} onSend={send} busy={busy} />
-                  ))}
-                </div>
-              </motion.div>
-            )}
           </AnimatePresence>
+
+          {liveMessage && (
+            <AssistantBubble message={liveMessage} onSend={send} busy={busy} animate statusText={statusText} />
+          )}
+
+          {showThinking && !liveMessage && (
+            <motion.div
+              className="msg assistant"
+              variants={messageVariants.assistant}
+              initial="hidden"
+              animate="visible"
+            >
+              <div className="msg-avatar"><Bot size={20} /></div>
+              <div className="msg-body">
+                {statusText && <StatusLine text={statusText} />}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
 

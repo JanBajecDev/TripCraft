@@ -2,12 +2,19 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { SummaryBar } from '../components/summary/SummaryBar'
 import { Chat } from '../components/chat/Chat'
 import { ItineraryPanel } from '../components/itinerary/ItineraryPanel'
-import { useAgentStream, appendTextDelta, addToolBlock, markToolDone, markStreamingDone } from '../hooks/useAgentStream'
+import {
+  useAgentStream,
+  createAssistantMessage,
+  appendTextDeltaToMessage,
+  addToolBlockToMessage,
+  markToolDoneForMessage,
+  markStreamingDoneForMessage,
+} from '../hooks/useAgentStream'
 import { diffIntake } from '../lib/diffIntake'
 import { fetchDestinations } from '../lib/api'
 import type { CityItem } from '../components/intake/CitySearch'
 import { DESTINATIONS as FALLBACK_DESTINATIONS, ORIGINS as FALLBACK_ORIGINS } from '../lib/constants'
-import type { TripIntake, ItineraryState, ChatMessage, Block } from '../types'
+import type { AssistantMessage, TripIntake, ItineraryState, ChatMessage } from '../types'
 
 interface PlanningPageProps {
   tripId: string
@@ -20,7 +27,7 @@ interface PlanningPageProps {
 
 export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, initialMessage }: PlanningPageProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [activeBlocks, setActiveBlocks] = useState<Block[]>([])
+  const [liveMessage, setLiveMessage] = useState<AssistantMessage | null>(null)
   const [itinerary, setItinerary] = useState<ItineraryState>({})
   const [streamItinerary, setStreamItinerary] = useState<ItineraryState>({})
   const [busy, setBusy] = useState(false)
@@ -33,9 +40,11 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const pendingChangeRef = useRef<string | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const streamItineraryRef = useRef<ItineraryState>({})
+  const liveMessageRef = useRef<AssistantMessage | null>(null)
+  const liveMessageIdRef = useRef<string | null>(null)
 
   const [origins, setOrigins] = useState<CityItem[]>(
-    FALLBACK_ORIGINS.map((o, i) => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
+    FALLBACK_ORIGINS.map(o => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
   )
   const [destinations, setDestinations] = useState<CityItem[]>(
     FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note }))
@@ -58,15 +67,33 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const visibleItinerary = Object.keys(itinerary).length > 0 ? itinerary : streamItinerary
   const total = displayTotal ?? visibleItinerary.budget?.total ?? 0
 
-  const callbacks = useCallback(() => ({
+  function syncLiveMessage(updater: (current: AssistantMessage | null) => AssistantMessage | null) {
+    setLiveMessage(prev => {
+      const next = updater(prev)
+      liveMessageRef.current = next
+      return next
+    })
+  }
+
+  const callbacks = {
     onTextDelta: (delta: string) => {
-      setActiveBlocks(prev => appendTextDelta(prev, delta))
+      syncLiveMessage(prev => appendTextDeltaToMessage(
+        prev ?? createAssistantMessage(liveMessageIdRef.current ?? crypto.randomUUID()),
+        delta,
+      ))
     },
     onToolStart: (toolName: string, detail?: string) => {
-      setActiveBlocks(prev => addToolBlock(prev, toolName, detail))
+      syncLiveMessage(prev => addToolBlockToMessage(
+        prev ?? createAssistantMessage(liveMessageIdRef.current ?? crypto.randomUUID()),
+        toolName,
+        detail,
+      ))
     },
     onToolDone: (toolName: string) => {
-      setActiveBlocks(prev => markToolDone(prev, toolName))
+      syncLiveMessage(prev => markToolDoneForMessage(
+        prev ?? createAssistantMessage(liveMessageIdRef.current ?? crypto.randomUUID()),
+        toolName,
+      ))
     },
     onItineraryUpdate: (section: string, data: unknown) => {
       setStreamItinerary(prev => {
@@ -76,15 +103,19 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
       })
     },
     onSuggestions: (items: string[]) => {
-      setActiveBlocks(prev => [...prev, { type: 'suggestions' as const, items }])
+      syncLiveMessage(prev => {
+        const base = prev ?? createAssistantMessage(liveMessageIdRef.current ?? crypto.randomUUID())
+        return { ...base, blocks: [...base.blocks, { type: 'suggestions' as const, items }] }
+      })
     },
     onDone: () => {
-      setActiveBlocks(prev => {
-        const committed = markStreamingDone(prev)
-        const id = crypto.randomUUID()
-        setMessages(msgs => [...msgs, { id, role: 'assistant', blocks: committed }])
-        return []
-      })
+      const completed = liveMessageRef.current ? markStreamingDoneForMessage(liveMessageRef.current) : null
+      if (completed && completed.blocks.length > 0) {
+        setMessages(msgs => [...msgs, completed])
+      }
+      liveMessageRef.current = null
+      liveMessageIdRef.current = null
+      setLiveMessage(null)
       const completedItinerary = streamItineraryRef.current
       if (Object.keys(completedItinerary).length > 0) {
         setItinerary(completedItinerary)
@@ -103,36 +134,29 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
     },
     onError: (message: string) => {
       console.error('Agent error:', message)
+      liveMessageRef.current = null
+      liveMessageIdRef.current = null
+      setLiveMessage(null)
       setBusy(false)
       busyRef.current = false
     },
-  }), [])
+  }
 
-  // Stable callbacks ref to avoid recreating useAgentStream on every render
-  const callbacksRef = useRef(callbacks())
-  callbacksRef.current = callbacks()
-
-  const stableCallbacks = useCallback(() => ({
-    onTextDelta: (d: string) => callbacksRef.current.onTextDelta(d),
-    onToolStart: (t: string) => callbacksRef.current.onToolStart(t),
-    onToolDone: (t: string) => callbacksRef.current.onToolDone(t),
-    onItineraryUpdate: (s: string, d: unknown) => callbacksRef.current.onItineraryUpdate(s, d),
-    onSuggestions: (items: string[]) => callbacksRef.current.onSuggestions(items),
-    onDone: () => callbacksRef.current.onDone(),
-    onError: (m: string) => callbacksRef.current.onError(m),
-  }), [])
-
-  const { send: streamSend } = useAgentStream(tripId, stableCallbacks())
+  const { send: streamSend } = useAgentStream(tripId, callbacks)
 
   function handleSend(text: string) {
     if (busyRef.current) return
     busyRef.current = true
     setBusy(true)
-    setActiveBlocks([])
     streamItineraryRef.current = {}
     setStreamItinerary({})
     const id = crypto.randomUUID()
     setMessages(prev => [...prev, { id, role: 'user', text }])
+    const assistantId = crypto.randomUUID()
+    liveMessageIdRef.current = assistantId
+    const assistantMessage = createAssistantMessage(assistantId)
+    liveMessageRef.current = assistantMessage
+    setLiveMessage(assistantMessage)
     streamSend(text)
   }
 
@@ -194,7 +218,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
         destinations={destinations}
       />
       <div className="workspace">
-        <Chat messages={messages} activeBlocks={activeBlocks} busy={busy} onSend={handleSend} />
+        <Chat messages={messages} liveMessage={liveMessage} busy={busy} onSend={handleSend} />
         <ItineraryPanel itinerary={visibleItinerary} state={intake} onTotalChange={setDisplayTotal} />
       </div>
     </div>
