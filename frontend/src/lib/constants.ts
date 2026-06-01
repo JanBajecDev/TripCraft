@@ -28,3 +28,57 @@ export const TOOL_LABELS: Record<string, string> = {
   tripadvisor_search:  'TripAdvisor',
   tripadvisor_reviews: 'TripAdvisor Reviews',
 }
+
+export const TOOL_PHRASES: Record<string, string[]> = {
+  google_flights: [
+    'Searching for the best flights…',
+    'Checking prices and availability…',
+    'Comparing airlines and routes…',
+    'Looking for direct options…',
+    'Finding the best fare…',
+  ],
+  google_hotels: [
+    'Checking hotels and availability…',
+    'Comparing ratings and prices…',
+    'Looking for the best location…',
+    'Reading through hotel options…',
+    'Picking places worth staying…',
+  ],
+  yelp_search: [
+    'Finding top restaurants…',
+    'Checking local favourites…',
+    'Looking at ratings and reviews…',
+    'Hunting down great food spots…',
+    'Filtering the best picks…',
+  ],
+  google_events: [
+    'Looking up events during your stay…',
+    'Checking what\'s on locally…',
+    'Finding concerts, festivals & more…',
+    'Scanning local listings…',
+    'Seeing what\'s happening in town…',
+  ],
+  tripadvisor_search: [
+    'Researching things to do…',
+    'Finding top-rated attractions…',
+    'Checking must-see spots…',
+    'Looking through traveller favourites…',
+    'Scanning activities for your interests…',
+  ],
+  tripadvisor_reviews: [
+    'Reading reviews…',
+    'Checking what travellers say…',
+    'Looking at recent feedback…',
+    'Verifying the top picks…',
+  ],
+}
+
+export const BETWEEN_TOOL_PHRASES = [
+  'Comparing options…',
+  'Picking the best results…',
+  'Almost there…',
+  'Putting it together…',
+  'Finding great matches…',
+  'Weighing up the choices…',
+  'Double-checking details…',
+]

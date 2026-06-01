@@ -1,21 +1,47 @@
 import { useState, useRef, useEffect } from 'react'
-import { Check, Bot, ArrowUp } from 'lucide-react'
-import { TOOL_LABELS } from '../../lib/constants'
+import { Bot, ArrowUp } from 'lucide-react'
+import { TOOL_PHRASES, BETWEEN_TOOL_PHRASES } from '../../lib/constants'
 import type { ChatMessage, Block } from '../../types'
 
-function ToolRow({ toolName, detail, status }: { toolName: string; detail?: string; status: 'running' | 'done' }) {
-  const label = TOOL_LABELS[toolName] ?? toolName
+function useStatusText(activeBlocks: Block[], busy: boolean): string | null {
+  const [idx, setIdx] = useState(0)
+
+  // Which phrase pool are we in right now?
+  const running = activeBlocks.findLast(b => b.type === 'tool' && b.status === 'running')
+  const toolName = running?.type === 'tool' ? running.toolName : null
+  const hasText = activeBlocks.some(b => b.type === 'text')
+  const doneCounts = activeBlocks.filter(b => b.type === 'tool' && b.status === 'done').length
+
+  const phrases: string[] | null = !busy ? null
+    : hasText ? null
+    : toolName ? (TOOL_PHRASES[toolName] ?? [`Searching…`])
+    : BETWEEN_TOOL_PHRASES
+
+  // Reset index when the pool changes (new tool started etc)
+  const prevPhrases = useRef(phrases)
+  useEffect(() => {
+    if (prevPhrases.current !== phrases) {
+      setIdx(0)
+      prevPhrases.current = phrases
+    }
+  })
+
+  // Cycle every 2.2 seconds
+  useEffect(() => {
+    if (!phrases) return
+    const t = setInterval(() => setIdx(i => i + 1), 2200)
+    return () => clearInterval(t)
+  }, [phrases])
+
+  if (!phrases) return null
+  return phrases[idx % phrases.length]
+}
+
+function StatusLine({ text }: { text: string }) {
   return (
-    <div className={`tool-row ${status}`}>
-      <span className="tool-spin">
-        {status === 'running'
-          ? <span className="spinner" />
-          : <Check size={16} />}
-      </span>
-      <span className="tool-text">
-        <span className="tool-api">{label}</span>
-        {detail ?? (status === 'running' ? 'Searching…' : 'Done')}
-      </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+      <span className="spinner" style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 14, color: 'var(--fg-3)' }}>{text}</span>
     </div>
   )
 }
@@ -24,9 +50,7 @@ function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: s
   if (block.type === 'text') {
     return <p className="msg-text">{block.text}{block.streaming && <span className="caret" />}</p>
   }
-  if (block.type === 'tool') {
-    return <ToolRow toolName={block.toolName} detail={block.detail} status={block.status} />
-  }
+  // tool blocks are never rendered individually — see StatusLine above
   if (block.type === 'suggestions') {
     return (
       <div className="suggestions">
@@ -51,7 +75,8 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
-  const showThinking = busy && activeBlocks.length === 0
+  const statusText = useStatusText(activeBlocks, busy)
+  const visibleBlocks = activeBlocks.filter(b => b.type !== 'tool')
 
   useEffect(() => {
     const el = scrollRef.current
@@ -92,21 +117,23 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
               <div key={m.id} className="msg assistant">
                 <div className="msg-avatar"><Bot size={20} /></div>
                 <div className="msg-body">
-                  {m.blocks.map((b, i) => <BlockRenderer key={i} block={b} onSend={send} busy={busy} />)}
+                  {m.blocks.filter(b => b.type !== 'tool').map((b, i) => (
+                    <BlockRenderer key={i} block={b} onSend={send} busy={busy} />
+                  ))}
                 </div>
               </div>
             )
           })}
 
           {/* In-flight assistant message */}
-          {(activeBlocks.length > 0 || showThinking) && (
+          {(visibleBlocks.length > 0 || statusText) && (
             <div className="msg assistant">
               <div className="msg-avatar"><Bot size={20} /></div>
               <div className="msg-body">
-                {showThinking && (
-                  <div className="thinking"><span className="dot" /><span className="dot" /><span className="dot" /></div>
-                )}
-                {activeBlocks.map((b, i) => <BlockRenderer key={i} block={b} onSend={send} busy={busy} />)}
+                {statusText && <StatusLine text={statusText} />}
+                {visibleBlocks.map((b, i) => (
+                  <BlockRenderer key={i} block={b} onSend={send} busy={busy} />
+                ))}
               </div>
             </div>
           )}
