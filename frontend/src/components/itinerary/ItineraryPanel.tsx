@@ -4,20 +4,40 @@ import type { ItineraryState, FlightLeg, TripIntake } from '../../types'
 import { Star as StarIcon, Map, Plane, Hotel, Utensils, Music2, Car, CheckCircle, ExternalLink, Receipt } from 'lucide-react'
 import { DESTINATIONS } from '../../lib/constants'
 
-function useHotelPhoto(name: string | undefined, area: string | undefined, provided?: string) {
-  const [url, setUrl] = useState<string | null>(provided ?? null)
-
+function usePhoto(query: string | undefined) {
+  const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
-    if (provided) { setUrl(provided); return }
-    if (!name) return
-    const q = encodeURIComponent(`${name} ${area ?? ''} hotel`)
-    fetch(`/api/photo?q=${q}`)
+    if (!query) return
+    fetch(`/api/photo?q=${encodeURIComponent(query)}`)
       .then(r => r.json())
       .then((d: { url: string | null }) => { if (d.url) setUrl(d.url) })
       .catch(() => {})
-  }, [name, area, provided])
-
+  }, [query])
   return url
+}
+
+const THUMB_GRADIENTS = [
+  'linear-gradient(135deg, #1E7FA0, #88D2E7)',
+  'linear-gradient(135deg, #3B6553, #7FA591)',
+  'linear-gradient(135deg, #5A4884, #9688B4)',
+  'linear-gradient(135deg, #B54708, #FDB022)',
+  'linear-gradient(135deg, #027A48, #32D583)',
+]
+
+function Thumb({ url, label }: { url: string | null; label: string }) {
+  const letter = label.trim()[0]?.toUpperCase() ?? '?'
+  const gradient = THUMB_GRADIENTS[label.charCodeAt(0) % THUMB_GRADIENTS.length]
+  return (
+    <div style={{
+      width: 72, height: 72, flexShrink: 0, borderRadius: 10, overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: url ? 'transparent' : gradient,
+    }}>
+      {url
+        ? <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <span style={{ color: '#fff', fontSize: 26, fontWeight: 700, fontFamily: 'var(--font-headline)' }}>{letter}</span>}
+    </div>
+  )
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -83,7 +103,7 @@ function ExternalCard({ href, children, className = '' }: { href: string; childr
       target="_blank"
       rel="noopener noreferrer"
       className={className}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
     >
       {children}
     </a>
@@ -91,32 +111,79 @@ function ExternalCard({ href, children, className = '' }: { href: string; childr
 }
 
 function HotelCard({ hotel, travellers }: { hotel: NonNullable<ItineraryState['hotel']>; travellers: number }) {
-  const photo = useHotelPhoto(hotel.name, hotel.area, hotel.thumbnail)
+  const photo = usePhoto(hotel.thumbnail ? undefined : `${hotel.name} ${hotel.area} hotel exterior`)
+  const displayPhoto = hotel.thumbnail ?? photo
   return (
-    <ExternalCard href={hotel.link ?? googleSearch(`${hotel.name} ${hotel.area} hotel`)} className="card hotel-card">
-      <div
-        className="hotel-thumb"
-        style={photo ? { backgroundImage: `url(${photo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
-      >
-        {!photo && <Hotel size={34} />}
+    <ExternalCard href={hotel.link ?? googleSearch(`${hotel.name} ${hotel.area} hotel`)} className="card" style={{ overflow: 'hidden' } as React.CSSProperties}>
+      {/* Full-width hero photo */}
+      <div style={{
+        width: '100%', height: 180, overflow: 'hidden', flexShrink: 0,
+        background: 'linear-gradient(135deg, color-mix(in srgb, var(--sky, #88D2E7) 40%, var(--surface-dim, #ECF2F5)), var(--surface-dim, #ECF2F5))',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-4)',
+      }}>
+        {displayPhoto
+          ? <img src={displayPhoto} alt={hotel.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <Hotel size={40} style={{ opacity: 0.4 }} />}
       </div>
+      {/* Content */}
       <div className="hotel-body">
         <div className="hotel-top">
           <strong>{hotel.name}</strong>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Stars rating={hotel.rating} />
-            {hotel.link && <ExternalLink size={13} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />}
+            <ExternalLink size={13} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />
           </div>
         </div>
         <div className="hotel-sub">{hotel.area} · {hotel.reviews.toLocaleString()} reviews</div>
         <p className="hotel-blurb">{hotel.blurb}</p>
         <div className="tag-row">{hotel.tags.map(t => <span key={t} className="tag">{t}</span>)}</div>
-        <div className="card-foot">
+        <div className="card-foot" style={{ margin: '0 -16px' }}>
           <span>£{hotel.perNight}/night · {hotel.nights} nights</span>
           <span className="price"><strong>£{(hotel.perNight * hotel.nights).toLocaleString()}</strong></span>
         </div>
       </div>
     </ExternalCard>
+  )
+}
+
+function RestaurantCard({ restaurant: r, index }: { restaurant: NonNullable<ItineraryState['restaurants']>[number]; index: number }) {
+  const photo = usePhoto(`${r.name} restaurant food`)
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease, delay: index * 0.06 }}>
+      <ExternalCard href={r.link ?? googleSearch(`${r.name} restaurant`)} className={`row-card${r.added ? ' added' : ''} clickable`}>
+        <Thumb url={photo} label={r.name} />
+        <div className="rc-main">
+          <div className="rc-top">
+            <strong>{r.name}</strong>
+            {r.added && <span className="added-tag">new</span>}
+            <ExternalLink size={12} style={{ color: 'var(--fg-4)', marginLeft: 4 }} />
+          </div>
+          <div className="rc-sub">{r.cuisine} · {r.price} · <span className="rc-src">{r.source}</span></div>
+          <p className="rc-note">{r.note}</p>
+        </div>
+        <Stars rating={r.rating} />
+      </ExternalCard>
+    </motion.div>
+  )
+}
+
+function EventCard({ event: e, index }: { event: NonNullable<ItineraryState['events']>[number]; index: number }) {
+  const photo = usePhoto(`${e.name} ${e.where}`)
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease, delay: index * 0.06 }}>
+      <ExternalCard href={e.link ?? googleSearch(`${e.name} ${e.where}`)} className="row-card clickable">
+        <Thumb url={photo} label={e.name} />
+        <div className="rc-main">
+          <div className="rc-top">
+            <strong>{e.name}</strong>
+            <ExternalLink size={12} style={{ color: 'var(--fg-4)', marginLeft: 4 }} />
+          </div>
+          <div className="rc-sub">{e.date} · {e.where}</div>
+          <p className="rc-note">{e.note}</p>
+        </div>
+        <span className="ev-price">{e.price}</span>
+      </ExternalCard>
+    </motion.div>
   )
 }
 
@@ -258,23 +325,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
           <Section icon={<Utensils size={18} />} title="Where to eat" source="Yelp + TripAdvisor" color="p" key="restaurants" delay={240}>
             <div className="list">
               {itinerary.restaurants.map((r, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease, delay: i * 0.06 }}>
-                  <ExternalCard
-                    href={r.link ?? googleSearch(`${r.name} restaurant`)}
-                    className={`row-card${r.added ? ' added' : ''} clickable`}
-                  >
-                    <div className="rc-main">
-                      <div className="rc-top">
-                        <strong>{r.name}</strong>
-                        {r.added && <span className="added-tag">new</span>}
-                        <ExternalLink size={12} style={{ color: 'var(--fg-4)', marginLeft: 4 }} />
-                      </div>
-                      <div className="rc-sub">{r.cuisine} · {r.price} · <span className="rc-src">{r.source}</span></div>
-                      <p className="rc-note">{r.note}</p>
-                    </div>
-                    <Stars rating={r.rating} />
-                  </ExternalCard>
-                </motion.div>
+                <RestaurantCard key={i} restaurant={r} index={i} />
               ))}
             </div>
           </Section>
@@ -284,23 +335,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
           <Section icon={<Music2 size={18} />} title="On while you're there" source="Google Events" color="t" key="events" delay={320}>
             <div className="list">
               {itinerary.events.map((e, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease, delay: i * 0.06 }}>
-                  <ExternalCard
-                    href={e.link ?? googleSearch(`${e.name} ${e.where}`)}
-                    className="row-card clickable"
-                  >
-                    <span className="ev-ico"><Music2 size={18} /></span>
-                    <div className="rc-main">
-                      <div className="rc-top">
-                        <strong>{e.name}</strong>
-                        <ExternalLink size={12} style={{ color: 'var(--fg-4)', marginLeft: 4 }} />
-                      </div>
-                      <div className="rc-sub">{e.date} · {e.where}</div>
-                      <p className="rc-note">{e.note}</p>
-                    </div>
-                    <span className="ev-price">{e.price}</span>
-                  </ExternalCard>
-                </motion.div>
+                <EventCard key={i} event={e} index={i} />
               ))}
             </div>
           </Section>
