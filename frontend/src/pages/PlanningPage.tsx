@@ -22,6 +22,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [activeBlocks, setActiveBlocks] = useState<Block[]>([])
   const [itinerary, setItinerary] = useState<ItineraryState>({})
+  const [streamItinerary, setStreamItinerary] = useState<ItineraryState>({})
   const [busy, setBusy] = useState(false)
   const [booked, setBooked] = useState(false)
   const [displayTotal, setDisplayTotal] = useState<number | null>(null)
@@ -31,6 +32,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const userChangedRef = useRef(false)
   const pendingChangeRef = useRef<string | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const streamItineraryRef = useRef<ItineraryState>({})
 
   const [origins, setOrigins] = useState<CityItem[]>(
     FALLBACK_ORIGINS.map((o, i) => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null }))
@@ -53,7 +55,8 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
     setIntake(partial)
   }, [setIntake])
 
-  const total = displayTotal ?? itinerary.budget?.total ?? 0
+  const visibleItinerary = Object.keys(itinerary).length > 0 ? itinerary : streamItinerary
+  const total = displayTotal ?? visibleItinerary.budget?.total ?? 0
 
   const callbacks = useCallback(() => ({
     onTextDelta: (delta: string) => {
@@ -66,7 +69,11 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
       setActiveBlocks(prev => markToolDone(prev, toolName))
     },
     onItineraryUpdate: (section: string, data: unknown) => {
-      setItinerary(prev => ({ ...prev, [section]: data }))
+      setStreamItinerary(prev => {
+        const next = { ...prev, [section]: data }
+        streamItineraryRef.current = next
+        return next
+      })
     },
     onSuggestions: (items: string[]) => {
       setActiveBlocks(prev => [...prev, { type: 'suggestions' as const, items }])
@@ -78,13 +85,18 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
         setMessages(msgs => [...msgs, { id, role: 'assistant', blocks: committed }])
         return []
       })
+      const completedItinerary = streamItineraryRef.current
+      if (Object.keys(completedItinerary).length > 0) {
+        setItinerary(completedItinerary)
+      }
+      streamItineraryRef.current = {}
+      setStreamItinerary({})
       setBusy(false)
       busyRef.current = false
       if (pendingChangeRef.current) {
         const msg = pendingChangeRef.current
         pendingChangeRef.current = null
         setTimeout(() => {
-          setItinerary({})
           handleSend(msg)
         }, 100)
       }
@@ -117,6 +129,8 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
     busyRef.current = true
     setBusy(true)
     setActiveBlocks([])
+    streamItineraryRef.current = {}
+    setStreamItinerary({})
     const id = crypto.randomUUID()
     setMessages(prev => [...prev, { id, role: 'user', text }])
     streamSend(text)
@@ -156,7 +170,6 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
       userChangedRef.current = false
 
       if (diff) {
-        setItinerary({})
         handleSend(diff)
       }
     }, 500)
@@ -182,7 +195,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
       />
       <div className="workspace">
         <Chat messages={messages} activeBlocks={activeBlocks} busy={busy} onSend={handleSend} />
-        <ItineraryPanel itinerary={itinerary} state={intake} onTotalChange={setDisplayTotal} />
+        <ItineraryPanel itinerary={visibleItinerary} state={intake} onTotalChange={setDisplayTotal} />
       </div>
     </div>
   )

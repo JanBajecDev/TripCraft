@@ -21,23 +21,31 @@ interface ChipProps {
   label: string
   value: string
   children?: ReactNode
+  locked?: boolean
 }
 
-function Chip({ icon, label, value, children }: ChipProps) {
+function Chip({ icon, label, value, children, locked = false }: ChipProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useOutside(ref, () => setOpen(false))
+
   return (
     <div className="sum-chip-wrap" ref={ref}>
-      <button type="button" className={`sum-chip${open ? ' open' : ''}`} onClick={() => setOpen(o => !o)}>
+      <button
+        type="button"
+        className={`sum-chip${open ? ' open' : ''}${locked ? ' locked' : ''}`}
+        onClick={locked ? undefined : () => setOpen(o => !o)}
+        disabled={locked}
+        aria-disabled={locked}
+      >
         {icon}
         <span className="sum-chip-text">
           <span className="sum-chip-label">{label}</span>
           <span className="sum-chip-value">{value}</span>
         </span>
-        {children && <ChevronDown size={14} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />}
+        {!locked && children && <ChevronDown size={14} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />}
       </button>
-      {open && children && (
+      {open && !locked && children && (
         <div className="sum-pop" onClick={e => e.stopPropagation()}>{children}</div>
       )}
     </div>
@@ -64,12 +72,9 @@ function DatesChip({ state, set }: { state: TripIntake; set: (partial: Partial<T
 
   const dateVal = state.dateMode === 'exact' ? state.dateExact : `Flexible · ${state.dateMonth}`
 
-  const exact = parseExactDate(state.dateExact)
-  const [start, setStart] = useState(exact.start)
-  const [end, setEnd] = useState(exact.end)
+  const [exactDraft, setExactDraft] = useState(() => parseExactDate(state.dateExact))
 
-  const flex = parseMonth(state.dateMonth)
-  const [month, setMonth] = useState(flex)
+  const [month, setMonth] = useState(() => parseMonth(state.dateMonth))
 
   function applyExact(newStart: string, newEnd: string) {
     if (!newStart || !newEnd) return
@@ -101,15 +106,16 @@ function DatesChip({ state, set }: { state: TripIntake; set: (partial: Partial<T
             <button type="button" className={`seg${state.dateMode === 'flexible' ? ' on' : ''}`} onClick={() => set({ dateMode: 'flexible' })}>Flexible</button>
           </div>
           {state.dateMode === 'exact' ? (
-            <div className="date-inputs">
+            <div className="date-inputs" key={state.dateExact}>
               <label className="date-field">
                 <span>Departure</span>
                 <input
                   type="date"
-                  value={start}
+                  value={exactDraft.start}
                   onChange={e => {
-                    setStart(e.target.value)
-                    applyExact(e.target.value, end)
+                    const next = { ...exactDraft, start: e.target.value }
+                    setExactDraft(next)
+                    applyExact(next.start, next.end)
                   }}
                 />
               </label>
@@ -117,16 +123,17 @@ function DatesChip({ state, set }: { state: TripIntake; set: (partial: Partial<T
                 <span>Return</span>
                 <input
                   type="date"
-                  value={end}
+                  value={exactDraft.end}
                   onChange={e => {
-                    setEnd(e.target.value)
-                    applyExact(start, e.target.value)
+                    const next = { ...exactDraft, end: e.target.value }
+                    setExactDraft(next)
+                    applyExact(next.start, next.end)
                   }}
                 />
               </label>
             </div>
           ) : (
-            <label className="date-field">
+            <label className="date-field" key={state.dateMonth}>
               <span>Month</span>
               <input
                 type="month"
@@ -144,7 +151,7 @@ function DatesChip({ state, set }: { state: TripIntake; set: (partial: Partial<T
   )
 }
 
-export function SummaryBar({ state, set, theme, onToggleTheme, tripReady, total, onBook, booked, origins = FALLBACK_ORIGINS.map((o, i) => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null })), destinations = FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note })) }: SummaryBarProps) {
+export function SummaryBar({ state, set, theme, onToggleTheme, tripReady, total, onBook, booked, origins = FALLBACK_ORIGINS.map(o => ({ id: `origin-${o.toLowerCase()}`, city: o, country: null, code: '', note: null })), destinations = FALLBACK_DESTINATIONS.map(d => ({ id: d.id, city: d.city, country: d.country, code: d.code, note: d.note })) }: SummaryBarProps) {
   const dest = destinations.find(d => d.id === state.destination) ?? destinations[0]
   const pct = ((state.budgetGbp - 800) / (6000 - 800) * 100).toFixed(1)
 
@@ -156,7 +163,7 @@ export function SummaryBar({ state, set, theme, onToggleTheme, tripReady, total,
       </div>
 
       <div className="sum-chips">
-        <Chip icon={<MapPin size={18} />} label="From" value={state.origin}>
+        <Chip icon={<MapPin size={18} />} label="From" value={state.origin} locked>
           <div className="pop-title">Flying from</div>
           <CitySearch
             items={origins}
@@ -169,7 +176,7 @@ export function SummaryBar({ state, set, theme, onToggleTheme, tripReady, total,
 
         <Plane size={20} className="sum-arrow" />
 
-        <Chip icon={<Compass size={18} />} label="To" value={dest.city}>
+        <Chip icon={<Compass size={18} />} label="To" value={dest.city} locked>
           <div className="pop-title">Destination</div>
           <CitySearch
             items={destinations}

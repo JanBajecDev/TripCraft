@@ -435,6 +435,16 @@ body {
 .sum-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--color-bg); border: 1px solid var(--color-border-variant); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; }
 .sum-chip:hover { border-color: var(--color-border); background: var(--color-surface-dim); }
 .sum-chip.open { border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent); }
+.sum-chip:disabled,
+.sum-chip.locked {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.sum-chip:disabled:hover,
+.sum-chip.locked:hover {
+  border-color: var(--color-border-variant);
+  background: var(--color-bg);
+}
 .sum-chip > svg { width: 18px; height: 18px; color: var(--color-primary); }
 .sum-chip-text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
 .sum-chip-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-fg-4); }
