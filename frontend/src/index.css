@@ -659,6 +659,7 @@ a .hotel-card:hover, a:hover .hotel-card { border-color: var(--color-outline); b
 .city-search-item:hover { background: var(--color-surface-1); }
 .city-search-item.highlighted { background: var(--color-surface-2); }
 .city-search-item.on { font-weight: 600; }
+.city-search-item.free-text { border-top: 1px solid var(--color-border-variant); color: var(--color-primary); font-weight: 600; }
 .city-search-item-text { display: flex; flex-direction: column; gap: 1px; }
 .city-search-item-city { font-size: var(--text-body); }
 .city-search-item-country { font-size: var(--text-micro); color: var(--color-fg-4); }

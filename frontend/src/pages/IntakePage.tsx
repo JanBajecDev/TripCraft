@@ -28,6 +28,39 @@ const iconMap: Record<string, React.ReactNode> = {
   shopping_bag: <ShoppingBag size={17} />,
 }
 
+function CustomInterestInput({ onAdd }: { onAdd: (label: string) => void }) {
+  const [value, setValue] = useState('')
+
+  function commit() {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    onAdd(trimmed)
+    setValue('')
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--color-surface-dim)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-pill)', overflow: 'hidden', height: 38, paddingLeft: 14, width: '100%', marginTop: 4 }}>
+      <input
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
+        placeholder="Add your own interest…"
+        style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 13, fontWeight: 600, color: 'var(--color-fg-2)', fontFamily: 'var(--font-sans)' }}
+      />
+      {value.trim() && (
+        <button
+          type="button"
+          onClick={commit}
+          style={{ flexShrink: 0, height: '100%', paddingInline: 14, background: 'var(--color-primary)', color: 'var(--color-on-primary)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-sans)' }}
+        >
+          Add
+        </button>
+      )}
+    </div>
+  )
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -296,6 +329,31 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                     </motion.button>
                   )
                 })}
+                {/* Custom interests added by user */}
+                {state.interests
+                  .filter(id => !INTERESTS.find(it => it.id === id))
+                  .map(custom => (
+                    <motion.button
+                      key={custom}
+                      type="button"
+                      className="interest-chip on"
+                      onClick={() => set({ interests: state.interests.filter(x => x !== custom) })}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.92 }}
+                      transition={chipSpring}
+                      layout
+                    >
+                      {custom}
+                      <Check size={17} className="check" />
+                    </motion.button>
+                  ))}
+                <CustomInterestInput
+                  onAdd={label => {
+                    const trimmed = label.trim()
+                    if (!trimmed || state.interests.includes(trimmed)) return
+                    set({ interests: [...state.interests, trimmed] })
+                  }}
+                />
               </div>
             </FieldCard>
           </motion.div>
