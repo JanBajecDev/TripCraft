@@ -33,7 +33,7 @@ function Chip({ icon, label, value, children }: ChipProps) {
           <span className="sum-chip-label">{label}</span>
           <span className="sum-chip-value">{value}</span>
         </span>
-        {children && <ChevronDown size={16} className="caret" />}
+        {children && <ChevronDown size={14} style={{ color: 'var(--fg-4)', flexShrink: 0, opacity: 0.6 }} />}
       </button>
       {open && children && (
         <div className="sum-pop" onClick={e => e.stopPropagation()}>{children}</div>
