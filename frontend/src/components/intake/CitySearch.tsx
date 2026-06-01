@@ -13,6 +13,7 @@ interface CitySearchProps {
   items: CityItem[]
   value: string
   onSelect: (item: CityItem) => void
+  onClear?: () => void
   placeholder?: string
   label?: string
 }
@@ -37,7 +38,7 @@ function makeFreeCity(cityName: string): CityItem {
   }
 }
 
-export function CitySearch({ items, value, onSelect, placeholder = 'Search cities...', label }: CitySearchProps) {
+export function CitySearch({ items, value, onSelect, onClear, placeholder = 'Search cities...', label }: CitySearchProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [cleared, setCleared] = useState(false)
@@ -79,6 +80,7 @@ export function CitySearch({ items, value, onSelect, placeholder = 'Search citie
     setQuery('')
     setCleared(true)
     setOpen(true)
+    onClear?.()
     inputRef.current?.focus()
   }
 

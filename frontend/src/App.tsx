@@ -40,9 +40,9 @@ export default function App() {
   function setIntake(partial: Partial<TripIntake>) {
     setIntakeState((prev) => {
       const next = { ...prev, ...partial };
-      if (partial.destination) {
+      if ("destination" in partial) {
         const dest = DESTINATIONS.find((d) => d.id === partial.destination);
-        if (dest) next.destCode = dest.code;
+        next.destCode = dest?.code ?? "";
       }
       return next;
     });

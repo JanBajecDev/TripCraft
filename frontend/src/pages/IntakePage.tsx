@@ -131,6 +131,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
   }, [])
 
   const dest = destinations.find(d => d.id === state.destination) ?? destinations[0]
+  const tripReady = Boolean(state.origin.trim()) && Boolean(state.destination.trim())
   const pct = ((state.budgetGbp - 800) / (6000 - 800) * 100).toFixed(1)
 
   const exact = parseExactDate(state.dateExact)
@@ -184,6 +185,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                 items={origins}
                 value={state.origin}
                 onSelect={item => set({ origin: item.city })}
+                onClear={() => set({ origin: '' })}
                 placeholder="Search departure city..."
                 label="Flying from"
               />
@@ -196,6 +198,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
                 items={destinations}
                 value={state.destination}
                 onSelect={item => set({ destination: item.id, destCode: item.code })}
+                onClear={() => set({ destination: '', destCode: '' })}
                 placeholder="Search destination city..."
                 label="Where to"
               />
@@ -375,7 +378,7 @@ export function IntakePage({ state, set, onSubmit, isLoading }: IntakePageProps)
             type="button"
             className={`btn-primary lg${isLoading ? ' loading' : ''}`}
             onClick={onSubmit}
-            disabled={state.interests.length === 0 || isLoading}
+            disabled={!tripReady || state.interests.length === 0 || isLoading}
             whileHover={isLoading ? {} : { scale: 1.03, y: -1 }}
             whileTap={isLoading ? {} : { scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
