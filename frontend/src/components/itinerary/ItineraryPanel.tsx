@@ -1,21 +1,36 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import type { ItineraryState, FlightLeg, TripIntake } from '../../types'
-import { Star as StarIcon, Map, Plane, Hotel, Utensils, Music2, Car, ReceiptIcon as ReceiptLong, CheckCircle, ArrowRight } from 'lucide-react'
+import { Star as StarIcon, Map, Plane, Hotel, Utensils, Music2, Car, CheckCircle, ExternalLink, Receipt } from 'lucide-react'
+import { DESTINATIONS } from '../../lib/constants'
+
+function useHotelPhoto(name: string | undefined, area: string | undefined, provided?: string) {
+  const [url, setUrl] = useState<string | null>(provided ?? null)
+
+  useEffect(() => {
+    if (provided) { setUrl(provided); return }
+    if (!name) return
+    const q = encodeURIComponent(`${name} ${area ?? ''} hotel`)
+    fetch(`/api/photo?q=${q}`)
+      .then(r => r.json())
+      .then((d: { url: string | null }) => { if (d.url) setUrl(d.url) })
+      .catch(() => {})
+  }, [name, area, provided])
+
+  return url
+}
 
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="stars" title={`${rating} / 5`}>
-      <StarIcon size={16} className="fill-current" />
+      <StarIcon size={16} className="fill-current" style={{ color: '#E8A33D' }} />
       <strong>{rating.toFixed(1)}</strong>
     </span>
   )
 }
 
-const sectionSpring = {
-  type: 'spring',
-  stiffness: 380,
-  damping: 28,
-} as const
+const ease = [0.22, 1, 0.36, 1] as const
+const sectionTransition = { type: 'spring', stiffness: 380, damping: 28 } as const
 
 function Section({ icon, title, source, color, children, delay = 0 }: {
   icon: React.ReactNode; title: string; source?: string; color?: string; children: React.ReactNode; delay?: number
@@ -23,10 +38,9 @@ function Section({ icon, title, source, color, children, delay = 0 }: {
   return (
     <motion.section
       className="it-section"
-      initial={{ opacity: 0, y: 14, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ ...sectionSpring, delay: delay / 1000 }}
-      layout
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...sectionTransition, delay: delay / 1000 }}
     >
       <div className="it-head">
         <span className={`it-ico ${color ?? ''}`}>{icon}</span>
@@ -58,6 +72,54 @@ function FlightLegRow({ leg, dir }: { leg: FlightLeg; dir: string }) {
   )
 }
 
+function googleSearch(q: string) {
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`
+}
+
+function ExternalCard({ href, children, className = '' }: { href: string; children: React.ReactNode; className?: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+    >
+      {children}
+    </a>
+  )
+}
+
+function HotelCard({ hotel, travellers }: { hotel: NonNullable<ItineraryState['hotel']>; travellers: number }) {
+  const photo = useHotelPhoto(hotel.name, hotel.area, hotel.thumbnail)
+  return (
+    <ExternalCard href={hotel.link ?? googleSearch(`${hotel.name} ${hotel.area} hotel`)} className="card hotel-card">
+      <div
+        className="hotel-thumb"
+        style={photo ? { backgroundImage: `url(${photo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+      >
+        {!photo && <Hotel size={34} />}
+      </div>
+      <div className="hotel-body">
+        <div className="hotel-top">
+          <strong>{hotel.name}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Stars rating={hotel.rating} />
+            {hotel.link && <ExternalLink size={13} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />}
+          </div>
+        </div>
+        <div className="hotel-sub">{hotel.area} · {hotel.reviews.toLocaleString()} reviews</div>
+        <p className="hotel-blurb">{hotel.blurb}</p>
+        <div className="tag-row">{hotel.tags.map(t => <span key={t} className="tag">{t}</span>)}</div>
+        <div className="card-foot">
+          <span>£{hotel.perNight}/night · {hotel.nights} nights</span>
+          <span className="price"><strong>£{(hotel.perNight * hotel.nights).toLocaleString()}</strong></span>
+        </div>
+      </div>
+    </ExternalCard>
+  )
+}
+
 interface ItineraryPanelProps {
   itinerary: ItineraryState
   state: TripIntake
@@ -75,22 +137,62 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
   ].filter(Boolean) as string[]
 
   const empty = revealed.length === 0
-  const dest = state.destination
+  const destData = DESTINATIONS.find(d => d.id === state.destination)
+  const destName = destData?.city ?? (state.destination.charAt(0).toUpperCase() + state.destination.slice(1))
 
   return (
     <aside className="itinerary">
-      <div className="it-top">
-        <div>
-          <div className="eyebrow">Your itinerary</div>
-          <h2 className="it-title">{dest.charAt(0).toUpperCase() + dest.slice(1)}, {state.tripDays} days</h2>
+      {/* Destination hero photo */}
+      {destData?.photo && !empty && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          style={{
+            margin: '-24px -24px 0',
+            height: 160,
+            overflow: 'hidden',
+            position: 'relative',
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={destData.photo}
+            alt={destName}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.55) 100%)',
+          }} />
+          <div style={{ position: 'absolute', bottom: 14, left: 20, color: '#fff' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>Your itinerary</div>
+            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-headline)', lineHeight: 1.2 }}>{destName}, {state.tripDays} days</div>
+          </div>
+          {revealed.length >= TOTAL_SLOTS && (
+            <div style={{ position: 'absolute', bottom: 16, right: 16 }}>
+              <span className="it-progress done"><CheckCircle size={17} />Ready</span>
+            </div>
+          )}
+          {!empty && revealed.length < TOTAL_SLOTS && (
+            <div style={{ position: 'absolute', bottom: 16, right: 16 }}>
+              <span className="it-progress">Drafting… {revealed.length}/{TOTAL_SLOTS}</span>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Title row when no photo yet */}
+      {(empty || !destData?.photo) && (
+        <div className="it-top">
+          <div>
+            <div className="eyebrow">Your itinerary</div>
+            <h2 className="it-title">{destName}, {state.tripDays} days</h2>
+          </div>
+          {revealed.length >= TOTAL_SLOTS && <span className="it-progress done"><CheckCircle size={17} />Ready</span>}
+          {!empty && revealed.length < TOTAL_SLOTS && <span className="it-progress">Drafting… {revealed.length}/{TOTAL_SLOTS}</span>}
         </div>
-        {!empty && revealed.length < TOTAL_SLOTS && (
-          <span className="it-progress">Drafting… {revealed.length}/{TOTAL_SLOTS}</span>
-        )}
-        {revealed.length >= TOTAL_SLOTS && (
-          <span className="it-progress done"><CheckCircle size={17} />Ready</span>
-        )}
-      </div>
+      )}
 
       {empty && (
         <div className="it-empty">
@@ -102,12 +204,7 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       <AnimatePresence>
         {itinerary.flights && (
           <Section icon={<Plane size={18} />} title="Flights" source="Google Flights" color="p" key="flights">
-            <motion.div
-              className="card flight-card"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay: 0.1 }}
-            >
+            <div className="card flight-card">
               <FlightLegRow leg={itinerary.flights.out} dir="Outbound" />
               <div className="leg-div" />
               <FlightLegRow leg={itinerary.flights.ret} dir="Return" />
@@ -118,51 +215,25 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
                   <small>£{itinerary.flights.perPerson} pp</small>
                 </span>
               </div>
-            </motion.div>
+            </div>
           </Section>
         )}
 
         {itinerary.hotel && (
           <Section icon={<Hotel size={18} />} title="Where you'll stay" source="Google Hotels" color="s" key="hotel" delay={80}>
-            <motion.div
-              className="card hotel-card"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay: 0.15 }}
-            >
-              <div className="hotel-thumb"><Hotel size={34} /></div>
-              <div className="hotel-body">
-                <div className="hotel-top">
-                  <strong>{itinerary.hotel.name}</strong>
-                  <Stars rating={itinerary.hotel.rating} />
-                </div>
-                <div className="hotel-sub">{itinerary.hotel.area} · {itinerary.hotel.reviews.toLocaleString()} reviews</div>
-                <p className="hotel-blurb">{itinerary.hotel.blurb}</p>
-                <div className="tag-row">{itinerary.hotel.tags.map(t => <span key={t} className="tag">{t}</span>)}</div>
-                <div className="card-foot">
-                  <span>£{itinerary.hotel.perNight}/night · {itinerary.hotel.nights} nights</span>
-                  <span className="price"><strong>£{(itinerary.hotel.perNight * itinerary.hotel.nights).toLocaleString()}</strong></span>
-                </div>
-              </div>
-            </motion.div>
+            <HotelCard hotel={itinerary.hotel} travellers={state.travellers} />
           </Section>
         )}
 
         {itinerary.days && (
           <Section icon={<Map size={18} />} title="Day by day" source="TripAdvisor" color="t" key="days" delay={160}>
-            <motion.div
-              className="days"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div className="days">
               {itinerary.days.map((d, idx) => (
                 <motion.div
-                  className="day"
-                  key={d.n}
+                  className="day" key={d.n}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const, delay: idx * 0.08 }}
+                  transition={{ duration: 0.3, ease, delay: idx * 0.07 }}
                 >
                   <div className="day-head">
                     <span className="day-n">{d.n}</span>
@@ -172,100 +243,85 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
                     {d.items.map((it, i) => (
                       <li key={i} className={it.added ? 'added' : ''}>
                         <span className="di-time">{it.time}</span>
-                        <ArrowRight size={17} className="di-ico" />
+                        <span className="material-symbols-outlined di-ico">{it.icon}</span>
                         <span>{it.text}{it.added && <span className="added-tag">added</span>}</span>
                       </li>
                     ))}
                   </ul>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
           </Section>
         )}
 
         {itinerary.restaurants && (
           <Section icon={<Utensils size={18} />} title="Where to eat" source="Yelp + TripAdvisor" color="p" key="restaurants" delay={240}>
-            <motion.div
-              className="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div className="list">
               {itinerary.restaurants.map((r, i) => (
-                <motion.div
-                  className={`row-card${r.added ? ' added' : ''}`}
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const, delay: i * 0.06 }}
-                >
-                  <div className="rc-main">
-                    <div className="rc-top"><strong>{r.name}</strong>{r.added && <span className="added-tag">new</span>}</div>
-                    <div className="rc-sub">{r.cuisine} · {r.price} · <span className="rc-src">{r.source}</span></div>
-                    <p className="rc-note">{r.note}</p>
-                  </div>
-                  <Stars rating={r.rating} />
+                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease, delay: i * 0.06 }}>
+                  <ExternalCard
+                    href={r.link ?? googleSearch(`${r.name} restaurant`)}
+                    className={`row-card${r.added ? ' added' : ''} clickable`}
+                  >
+                    <div className="rc-main">
+                      <div className="rc-top">
+                        <strong>{r.name}</strong>
+                        {r.added && <span className="added-tag">new</span>}
+                        <ExternalLink size={12} style={{ color: 'var(--fg-4)', marginLeft: 4 }} />
+                      </div>
+                      <div className="rc-sub">{r.cuisine} · {r.price} · <span className="rc-src">{r.source}</span></div>
+                      <p className="rc-note">{r.note}</p>
+                    </div>
+                    <Stars rating={r.rating} />
+                  </ExternalCard>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
           </Section>
         )}
 
         {itinerary.events && (
           <Section icon={<Music2 size={18} />} title="On while you're there" source="Google Events" color="t" key="events" delay={320}>
-            <motion.div
-              className="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div className="list">
               {itinerary.events.map((e, i) => (
-                <motion.div
-                  className="row-card"
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const, delay: i * 0.06 }}
-                >
-                  <span className="ev-ico"><Music2 size={18} /></span>
-                  <div className="rc-main">
-                    <div className="rc-top"><strong>{e.name}</strong></div>
-                    <div className="rc-sub">{e.date} · {e.where}</div>
-                    <p className="rc-note">{e.note}</p>
-                  </div>
-                  <span className="ev-price">{e.price}</span>
+                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease, delay: i * 0.06 }}>
+                  <ExternalCard
+                    href={e.link ?? googleSearch(`${e.name} ${e.where}`)}
+                    className="row-card clickable"
+                  >
+                    <span className="ev-ico"><Music2 size={18} /></span>
+                    <div className="rc-main">
+                      <div className="rc-top">
+                        <strong>{e.name}</strong>
+                        <ExternalLink size={12} style={{ color: 'var(--fg-4)', marginLeft: 4 }} />
+                      </div>
+                      <div className="rc-sub">{e.date} · {e.where}</div>
+                      <p className="rc-note">{e.note}</p>
+                    </div>
+                    <span className="ev-price">{e.price}</span>
+                  </ExternalCard>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
           </Section>
         )}
 
         {itinerary.car && (
           <Section icon={<Car size={18} />} title="Rental car" color="s" key="car" delay={400}>
-            <motion.div
-              className="card car-card"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay: 0.1 }}
-            >
+            <div className="card car-card">
               <div className="rc-main">
                 <div className="rc-top"><strong>{itinerary.car.name}</strong></div>
                 <div className="rc-sub">{itinerary.car.cat}</div>
                 <p className="rc-note">{itinerary.car.note}</p>
               </div>
               <span className="price"><strong>£{itinerary.car.perDay}</strong><small>{itinerary.car.days} day</small></span>
-            </motion.div>
+            </div>
           </Section>
         )}
 
         {itinerary.budget && revealed.length >= TOTAL_SLOTS && (
-          <Section icon={<ReceiptLong size={18} />} title="Budget" color="p" key="budget" delay={480}>
-            <motion.div
-              className="card budget-card"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay: 0.1 }}
-            >
+          <Section icon={<Receipt size={18} />} title="Budget" color="p" key="budget" delay={480}>
+            <div className="card budget-card">
               {itinerary.budget.lines.map((l, i) => (
                 <div className="bl" key={i}>
                   <span className="bl-label">{l.label}<small>{l.detail}</small></span>
@@ -277,19 +333,14 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
                 <span className="bl-amt">£{itinerary.budget.total.toLocaleString()}</span>
               </div>
               <div className={`budget-bar ${itinerary.budget.total <= state.budgetGbp ? '' : 'over'}`}>
-                <motion.div
-                  className="bb-fill"
-                  initial={{ width: 0 }}
-                  animate={{ width: Math.min(100, itinerary.budget.total / state.budgetGbp * 100) + '%' }}
-                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] as const, delay: 0.3 }}
-                />
+                <div className="bb-fill" style={{ width: Math.min(100, itinerary.budget.total / state.budgetGbp * 100) + '%' }} />
               </div>
               <div className="budget-msg">
                 {itinerary.budget.total <= state.budgetGbp
                   ? <><CheckCircle size={16} />£{(state.budgetGbp - itinerary.budget.total).toLocaleString()} under your £{state.budgetGbp.toLocaleString()} budget</>
-                  : <><span className="text-error">Over by £{(itinerary.budget.total - state.budgetGbp).toLocaleString()}</span></>}
+                  : <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>error</span>£{(itinerary.budget.total - state.budgetGbp).toLocaleString()} over budget</>}
               </div>
-            </motion.div>
+            </div>
           </Section>
         )}
       </AnimatePresence>

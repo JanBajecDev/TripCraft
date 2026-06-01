@@ -15,6 +15,7 @@ const FlightsSchema = z.object({
 const HotelSchema = z.object({
   name: z.string(), area: z.string(), rating: z.number(), reviews: z.number(),
   nights: z.number(), perNight: z.number(), blurb: z.string(), tags: z.array(z.string()),
+  thumbnail: z.string().optional(), link: z.string().optional(),
 })
 
 const DayItemSchema = z.object({ time: z.string(), icon: z.string(), text: z.string() })
@@ -23,11 +24,13 @@ const DaySchema = z.object({ n: z.number(), date: z.string(), title: z.string(),
 const RestaurantSchema = z.object({
   name: z.string(), cuisine: z.string(), price: z.string(),
   rating: z.number(), source: z.string(), note: z.string(),
+  link: z.string().optional(),
 })
 
 const EventSchema = z.object({
   name: z.string(), date: z.string(), where: z.string(),
   price: z.string(), icon: z.string(), note: z.string(),
+  link: z.string().optional(),
 })
 
 const CarSchema = z.object({

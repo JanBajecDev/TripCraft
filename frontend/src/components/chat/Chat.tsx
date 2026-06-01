@@ -87,9 +87,33 @@ function ToolRow({ toolName, detail, status }: { toolName: string; detail?: stri
   )
 }
 
+function renderMarkdown(text: string): React.ReactNode[] {
+  // Split on **bold** and *italic*, render inline
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return parts.map((p, i) => {
+    if (p.startsWith('**') && p.endsWith('**')) return <strong key={i}>{p.slice(2, -2)}</strong>
+    if (p.startsWith('*') && p.endsWith('*')) return <em key={i}>{p.slice(1, -1)}</em>
+    return p
+  })
+}
+
 function BlockRenderer({ block, onSend, busy }: { block: Block; onSend: (text: string) => void; busy: boolean }) {
   if (block.type === 'text') {
-    return <p className="msg-text">{block.text}{block.streaming && <span className="caret" />}</p>
+    // Split into paragraphs on double newlines
+    const paragraphs = block.text.split(/\n\n+/)
+    return (
+      <>
+        {paragraphs.map((para, i) => {
+          const isLast = i === paragraphs.length - 1
+          return (
+            <p key={i} className="msg-text">
+              {renderMarkdown(para)}
+              {isLast && block.streaming && <span className="caret" />}
+            </p>
+          )
+        })}
+      </>
+    )
   }
 
   if (block.type === 'tool') {
@@ -153,6 +177,13 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
   const statusText = useStatusText(activeBlocks, busy)
   const showThinking = busy && activeBlocks.length === 0
 
+  // In-flight view: hide tool rows (status line handles those), keep last suggestions only
+  const displayActiveBlocks = (() => {
+    const nonTool = activeBlocks.filter(b => b.type !== 'tool')
+    const lastSugIdx = nonTool.map((b, i) => b.type === 'suggestions' ? i : -1).filter(i => i >= 0).at(-1)
+    return nonTool.filter((b, i) => b.type !== 'suggestions' || i === lastSugIdx)
+  })()
+
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -200,6 +231,13 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
                 )
               }
 
+              // Committed messages: skip tool rows, deduplicate suggestions (keep last only)
+              const displayBlocks = (() => {
+                const nonTool = m.blocks.filter(b => b.type !== 'tool')
+                const lastSugIdx = nonTool.map((b, i) => b.type === 'suggestions' ? i : -1).filter(i => i >= 0).at(-1)
+                return nonTool.filter((b, i) => b.type !== 'suggestions' || i === lastSugIdx)
+              })()
+
               return (
                 <motion.div
                   key={m.id}
@@ -211,7 +249,7 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
                 >
                   <div className="msg-avatar"><Bot size={20} /></div>
                   <div className="msg-body">
-                    {m.blocks.map((block, i) => (
+                    {displayBlocks.map((block, i) => (
                       <BlockRenderer key={i} block={block} onSend={send} busy={busy} />
                     ))}
                   </div>
@@ -231,24 +269,7 @@ export function Chat({ messages, activeBlocks, busy, onSend }: ChatProps) {
                 <div className="msg-avatar"><Bot size={20} /></div>
                 <div className="msg-body">
                   {statusText && <StatusLine text={statusText} />}
-                  {showThinking && (
-                    <div className="thinking">
-                      {[0, 1, 2].map(i => (
-                        <motion.span
-                          key={i}
-                          className="dot"
-                          animate={{ scale: [0.6, 1.2, 0.6], opacity: [0.4, 1, 0.4] }}
-                          transition={{
-                            duration: 1.2,
-                            repeat: Infinity,
-                            ease: 'easeInOut',
-                            delay: i * 0.15,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {activeBlocks.map((block, i) => (
+                  {displayActiveBlocks.map((block, i) => (
                     <BlockRenderer key={i} block={block} onSend={send} busy={busy} />
                   ))}
                 </div>

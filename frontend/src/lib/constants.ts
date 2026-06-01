@@ -1,9 +1,9 @@
 export const DESTINATIONS = [
-  { id: 'lisbon', city: 'Lisbon', country: 'Portugal', code: 'LIS', note: 'Festas de Lisboa on now' },
-  { id: 'barcelona', city: 'Barcelona', country: 'Spain', code: 'BCN', note: 'Beaches + Gaudí' },
-  { id: 'rome', city: 'Rome', country: 'Italy', code: 'FCO', note: 'Ancient history' },
-  { id: 'athens', city: 'Athens', country: 'Greece', code: 'ATH', note: 'Islands nearby' },
-  { id: 'copenhagen', city: 'Copenhagen', country: 'Denmark', code: 'CPH', note: 'Design + food' },
+  { id: 'lisbon',     city: 'Lisbon',     country: 'Portugal', code: 'LIS', note: 'Festas de Lisboa on now', photo: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=900&q=80' },
+  { id: 'barcelona',  city: 'Barcelona',  country: 'Spain',    code: 'BCN', note: 'Beaches + Gaudí',        photo: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=900&q=80' },
+  { id: 'rome',       city: 'Rome',       country: 'Italy',    code: 'FCO', note: 'Ancient history',        photo: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=900&q=80' },
+  { id: 'athens',     city: 'Athens',     country: 'Greece',   code: 'ATH', note: 'Islands nearby',         photo: 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=900&q=80' },
+  { id: 'copenhagen', city: 'Copenhagen', country: 'Denmark',  code: 'CPH', note: 'Design + food',          photo: 'https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=900&q=80' },
 ] as const
 
 export const ORIGINS = ['London', 'Manchester', 'Edinburgh', 'Dublin', 'Paris', 'Amsterdam'] as const

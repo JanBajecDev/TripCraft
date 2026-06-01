@@ -16,12 +16,15 @@ export const googleEventsTool = tool({
     const events = data.events_results as Record<string, unknown>[] | undefined
     if (!events?.length) return { error: 'No events found', raw: data }
 
+    const ticketInfo = (e: Record<string, unknown>) => {
+      const t = e.ticket_info as Record<string, unknown>[] | undefined
+      return t?.[0]?.link as string | undefined
+    }
     return events.slice(0, 5).map(e => ({
       title:    e.title,
       date:     e.date,
       address:  e.address,
-      link:     e.link,
-      ticket_info: e.ticket_info,
+      link:     ticketInfo(e) ?? e.link,
       description: e.description,
     }))
   },

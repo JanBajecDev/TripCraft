@@ -3,7 +3,7 @@ const BASE = "https://serpapi.com/search.json";
 export async function serpFetch(
   params: Record<string, string>
 ): Promise<unknown> {
-  const { engine, api_key: _key, ...logParams } = { ...params, api_key: '' }
+  const { engine, api_key: _key, ...logParams } = { ...params, api_key: '' } as Record<string, string>
   console.log(`  [serp] ${engine} →`, JSON.stringify(logParams))
 
   const url = new URL(BASE);

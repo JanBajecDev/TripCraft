@@ -31,7 +31,8 @@ export const googleHotelsTool = tool({
       pricePerNight: h.rate_per_night,
       description: h.description,
       amenities:   (h.amenities as string[] | undefined)?.slice(0, 5),
-      link:        h.link,
+      thumbnail:   (h.images as Record<string, unknown>[] | undefined)?.[0]?.thumbnail,
+      link:        h.link ? `https://www.google.com${h.link}` : `https://www.google.com/search?q=${encodeURIComponent(String(h.name) + ' hotel')}`,
     }))
   },
 })

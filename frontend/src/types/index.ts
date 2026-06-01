@@ -26,6 +26,8 @@ export interface HotelData {
   perNight: number
   blurb: string
   tags: string[]
+  thumbnail?: string
+  link?: string
 }
 
 export interface DayItem {
@@ -49,6 +51,7 @@ export interface RestaurantData {
   rating: number
   source: string
   note: string
+  link?: string
   added?: boolean
 }
 
@@ -59,6 +62,7 @@ export interface EventData {
   price: string
   icon: string
   note: string
+  link?: string
 }
 
 export interface CarData {

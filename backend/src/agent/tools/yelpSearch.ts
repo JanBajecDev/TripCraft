@@ -26,6 +26,7 @@ export const yelpSearchTool = tool({
       categories: r.categories,
       address:    r.address,
       snippet:    r.snippet,
+      link:       r.link,
     }))
   },
 })

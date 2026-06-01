@@ -33,6 +33,11 @@ function summariseArgs(toolName: string, args: Record<string, unknown>): string 
   }
 }
 
+// Normalize a name for fuzzy-ish cache lookup
+function normalize(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 // Map emit tool names → itinerary section keys
 const EMIT_SECTION_MAP: Record<string, string> = {
   emit_flights:     'flights',
@@ -44,7 +49,6 @@ const EMIT_SECTION_MAP: Record<string, string> = {
   emit_budget:      'budget',
 }
 
-// Tools that are internal emit helpers — don't show as tool rows in the chat
 const SILENT_TOOLS = new Set(Object.keys(EMIT_SECTION_MAP).concat(['emit_suggestions']))
 
 export async function runAgent({
@@ -65,6 +69,28 @@ export async function runAgent({
 
   let fullText = ''
   const itineraryUpdates: Record<string, unknown> = {}
+
+  // Link cache: keyed by normalized name → actual URL from SerpAPI
+  const linkCache = new Map<string, string>()
+  // Thumbnail cache: hotel name → thumbnail URL
+  const thumbCache = new Map<string, string>()
+
+  function injectLinks<T extends { name?: string; link?: string; thumbnail?: string }>(
+    items: T[],
+    cacheMap: Map<string, string>,
+    thumbMap?: Map<string, string>
+  ): T[] {
+    return items.map(item => {
+      const key = normalize(item.name ?? '')
+      const cachedLink = cacheMap.get(key)
+      const cachedThumb = thumbMap?.get(key)
+      return {
+        ...item,
+        link: item.link || cachedLink,
+        ...(cachedThumb ? { thumbnail: item.thumbnail || cachedThumb } : {}),
+      }
+    })
+  }
 
   const { fullStream } = streamText({
     model,
@@ -106,10 +132,26 @@ export async function runAgent({
         if (EMIT_SECTION_MAP[name]) {
           const section = EMIT_SECTION_MAP[name]
           console.log(`[agent] emit_${section}`)
-          const data = section === 'days' ? args.days
-            : section === 'restaurants' ? args.restaurants
-            : section === 'events' ? args.events
-            : args
+
+          let data: unknown
+          if (section === 'restaurants') {
+            const rows = args.restaurants as Record<string, unknown>[] | undefined ?? []
+            data = injectLinks(rows as { name?: string; link?: string }[], linkCache)
+          } else if (section === 'events') {
+            const rows = args.events as Record<string, unknown>[] | undefined ?? []
+            data = injectLinks(rows as { name?: string; link?: string }[], linkCache)
+          } else if (section === 'hotel') {
+            data = injectLinks(
+              [args as { name?: string; link?: string; thumbnail?: string }],
+              linkCache,
+              thumbCache
+            )[0]
+          } else if (section === 'days') {
+            data = args.days
+          } else {
+            data = args
+          }
+
           send('itinerary_update', { section, data })
           itineraryUpdates[section === 'car' ? 'carRental' : section] = data
         } else if (name === 'emit_suggestions') {
@@ -124,9 +166,36 @@ export async function runAgent({
       }
 
       case 'tool-result': {
-        if (!SILENT_TOOLS.has(chunk.toolName)) {
-          console.log(`[agent] tool done: ${chunk.toolName}`)
-          send('tool_done', { toolName: chunk.toolName })
+        const toolName = chunk.toolName
+        const result = chunk.result as unknown
+
+        // Cache links and thumbnails from real SerpAPI results
+        if (toolName === 'yelp_search' || toolName === 'tripadvisor_search') {
+          const rows = Array.isArray(result) ? result : []
+          for (const r of rows as Record<string, unknown>[]) {
+            const n = normalize(String(r.name ?? ''))
+            if (n && r.link) linkCache.set(n, String(r.link))
+          }
+        }
+        if (toolName === 'google_events') {
+          const rows = Array.isArray(result) ? result : []
+          for (const r of rows as Record<string, unknown>[]) {
+            const n = normalize(String(r.title ?? r.name ?? ''))
+            if (n && r.link) linkCache.set(n, String(r.link))
+          }
+        }
+        if (toolName === 'google_hotels') {
+          const rows = Array.isArray(result) ? result : []
+          for (const r of rows as Record<string, unknown>[]) {
+            const n = normalize(String(r.name ?? ''))
+            if (n && r.link) linkCache.set(n, String(r.link))
+            if (n && r.thumbnail) thumbCache.set(n, String(r.thumbnail))
+          }
+        }
+
+        if (!SILENT_TOOLS.has(toolName)) {
+          console.log(`[agent] tool done: ${toolName}`)
+          send('tool_done', { toolName })
         }
         break
       }
