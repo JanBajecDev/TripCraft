@@ -141,11 +141,10 @@ export async function runAgent({
             const rows = args.events as Record<string, unknown>[] | undefined ?? []
             data = injectLinks(rows as { name?: string; link?: string }[], linkCache)
           } else if (section === 'hotel') {
-            data = injectLinks(
-              [args as { name?: string; link?: string; thumbnail?: string }],
-              linkCache,
-              thumbCache
-            )[0]
+            const opts = (args.options as { name?: string; link?: string; thumbnail?: string }[] | undefined) ?? []
+            data = { options: injectLinks(opts, linkCache, thumbCache) }
+          } else if (section === 'flights') {
+            data = args  // { options: [...] } already
           } else if (section === 'days') {
             data = args.days
           } else {

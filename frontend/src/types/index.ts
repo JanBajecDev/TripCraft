@@ -10,14 +10,18 @@ export interface FlightLeg {
   stops: string
 }
 
-export interface FlightData {
+export interface FlightOption {
   out: FlightLeg
   ret: FlightLeg
   perPerson: number
   cabin: string
 }
 
-export interface HotelData {
+export interface FlightData {
+  options: FlightOption[]
+}
+
+export interface HotelOption {
   name: string
   area: string
   rating: number
@@ -28,6 +32,10 @@ export interface HotelData {
   tags: string[]
   thumbnail?: string
   link?: string
+}
+
+export interface HotelData {
+  options: HotelOption[]
 }
 
 export interface DayItem {

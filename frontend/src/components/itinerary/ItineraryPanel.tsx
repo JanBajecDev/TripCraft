@@ -52,8 +52,25 @@ function Stars({ rating }: { rating: number }) {
 const ease = [0.22, 1, 0.36, 1] as const
 const sectionTransition = { type: 'spring', stiffness: 380, damping: 28 } as const
 
-function Section({ icon, title, source, color, children, delay = 0 }: {
-  icon: React.ReactNode; title: string; source?: string; color?: string; children: React.ReactNode; delay?: number
+function OptionNav({ idx, total, onPrev, onNext }: { idx: number; total: number; onPrev: () => void; onNext: () => void }) {
+  if (total <= 1) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+      <button
+        type="button" onClick={onPrev} disabled={idx === 0}
+        style={{ width: 28, height: 28, border: '1px solid var(--outline-variant)', borderRadius: 6, background: 'var(--surface-bright)', color: 'var(--fg-2)', cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.35 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}
+      >‹</button>
+      <span style={{ fontSize: 12, color: 'var(--fg-4)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1}/{total}</span>
+      <button
+        type="button" onClick={onNext} disabled={idx === total - 1}
+        style={{ width: 28, height: 28, border: '1px solid var(--outline-variant)', borderRadius: 6, background: 'var(--surface-bright)', color: 'var(--fg-2)', cursor: idx === total - 1 ? 'not-allowed' : 'pointer', opacity: idx === total - 1 ? 0.35 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}
+      >›</button>
+    </div>
+  )
+}
+
+function Section({ icon, title, source, color, children, delay = 0, nav }: {
+  icon: React.ReactNode; title: string; source?: string; color?: string; children: React.ReactNode; delay?: number; nav?: React.ReactNode
 }) {
   return (
     <motion.section
@@ -66,6 +83,7 @@ function Section({ icon, title, source, color, children, delay = 0 }: {
         <span className={`it-ico ${color ?? ''}`}>{icon}</span>
         <h3>{title}</h3>
         {source && <span className="it-source">via {source}</span>}
+        {nav}
       </div>
       {children}
     </motion.section>
@@ -111,18 +129,33 @@ function ExternalCard({ href, children, className = '' }: { href: string; childr
 }
 
 function HotelCard({ hotel, travellers }: { hotel: NonNullable<ItineraryState['hotel']>; travellers: number }) {
-  const photo = usePhoto(hotel.thumbnail ? undefined : `${hotel.name} ${hotel.area} hotel exterior`)
-  const displayPhoto = hotel.thumbnail ?? photo
+  // Always fetch a Google Images fallback — used if the SerpAPI thumbnail is broken
+  const fallbackPhoto = usePhoto(`${hotel.name} ${hotel.area} hotel`)
+  const [imgSrc, setImgSrc] = useState<string | null>(hotel.thumbnail ?? fallbackPhoto)
+
+  // When fallback arrives, use it if we have no src yet
+  useEffect(() => {
+    if (!imgSrc && fallbackPhoto) setImgSrc(fallbackPhoto)
+  }, [fallbackPhoto, imgSrc])
+
   return (
     <ExternalCard href={hotel.link ?? googleSearch(`${hotel.name} ${hotel.area} hotel`)} className="card" style={{ overflow: 'hidden' } as React.CSSProperties}>
-      {/* Full-width hero photo */}
       <div style={{
         width: '100%', height: 180, overflow: 'hidden', flexShrink: 0,
-        background: 'linear-gradient(135deg, color-mix(in srgb, var(--sky, #88D2E7) 40%, var(--surface-dim, #ECF2F5)), var(--surface-dim, #ECF2F5))',
+        background: 'linear-gradient(135deg, color-mix(in srgb, #88D2E7 40%, #ECF2F5), #ECF2F5)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-4)',
       }}>
-        {displayPhoto
-          ? <img src={displayPhoto} alt={hotel.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        {imgSrc
+          ? <img
+              src={imgSrc}
+              alt={hotel.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              onError={() => {
+                // Primary src broken — fall back to Google Images result
+                if (fallbackPhoto && imgSrc !== fallbackPhoto) setImgSrc(fallbackPhoto)
+                else setImgSrc(null)
+              }}
+            />
           : <Hotel size={40} style={{ opacity: 0.4 }} />}
       </div>
       {/* Content */}
@@ -190,11 +223,31 @@ function EventCard({ event: e, index }: { event: NonNullable<ItineraryState['eve
 interface ItineraryPanelProps {
   itinerary: ItineraryState
   state: TripIntake
+  onTotalChange?: (total: number) => void
 }
 
 const TOTAL_SLOTS = 5
 
-export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
+export function ItineraryPanel({ itinerary, state, onTotalChange }: ItineraryPanelProps) {
+  const [flightIdx, setFlightIdx] = useState(0)
+  const [hotelIdx, setHotelIdx] = useState(0)
+
+  // Recalculate total when selection changes
+  useEffect(() => {
+    if (!itinerary.budget) return
+    const flightOpts = itinerary.flights?.options
+    const hotelOpts = itinerary.hotel?.options
+    if (!flightOpts && !hotelOpts) return
+
+    const baseFlight = flightOpts?.[0]?.perPerson ?? 0
+    const selFlight = flightOpts?.[flightIdx]?.perPerson ?? baseFlight
+    const baseHotel = hotelOpts ? hotelOpts[0].perNight * hotelOpts[0].nights : 0
+    const selHotel = hotelOpts ? hotelOpts[hotelIdx].perNight * hotelOpts[hotelIdx].nights : baseHotel
+
+    const flightDelta = (selFlight - baseFlight) * state.travellers
+    const hotelDelta = selHotel - baseHotel
+    onTotalChange?.(itinerary.budget.total + flightDelta + hotelDelta)
+  }, [flightIdx, hotelIdx, itinerary.flights, itinerary.hotel, itinerary.budget, state.travellers, onTotalChange])
   const revealed = [
     itinerary.flights && 'flights',
     itinerary.hotel && 'hotel',
@@ -269,28 +322,42 @@ export function ItineraryPanel({ itinerary, state }: ItineraryPanelProps) {
       )}
 
       <AnimatePresence>
-        {itinerary.flights && (
-          <Section icon={<Plane size={18} />} title="Flights" source="Google Flights" color="p" key="flights">
-            <div className="card flight-card">
-              <FlightLegRow leg={itinerary.flights.out} dir="Outbound" />
-              <div className="leg-div" />
-              <FlightLegRow leg={itinerary.flights.ret} dir="Return" />
-              <div className="card-foot">
-                <span>{itinerary.flights.out.airline} · {itinerary.flights.cabin}</span>
-                <span className="price">
-                  <strong>£{(itinerary.flights.perPerson * state.travellers).toLocaleString()}</strong>
-                  <small>£{itinerary.flights.perPerson} pp</small>
-                </span>
+        {itinerary.flights?.options?.length && (() => {
+          const opts = itinerary.flights!.options
+          const f = opts[flightIdx] ?? opts[0]
+          return (
+            <Section
+              icon={<Plane size={18} />} title="Flights" source="Google Flights" color="p" key="flights"
+              nav={<OptionNav idx={flightIdx} total={opts.length} onPrev={() => setFlightIdx(i => i - 1)} onNext={() => setFlightIdx(i => i + 1)} />}
+            >
+              <div className="card flight-card">
+                <FlightLegRow leg={f.out} dir="Outbound" />
+                <div className="leg-div" />
+                <FlightLegRow leg={f.ret} dir="Return" />
+                <div className="card-foot">
+                  <span>{f.out.airline} · {f.cabin}</span>
+                  <span className="price">
+                    <strong>£{(f.perPerson * state.travellers).toLocaleString()}</strong>
+                    <small>£{f.perPerson} pp</small>
+                  </span>
+                </div>
               </div>
-            </div>
-          </Section>
-        )}
+            </Section>
+          )
+        })()}
 
-        {itinerary.hotel && (
-          <Section icon={<Hotel size={18} />} title="Where you'll stay" source="Google Hotels" color="s" key="hotel" delay={80}>
-            <HotelCard hotel={itinerary.hotel} travellers={state.travellers} />
-          </Section>
-        )}
+        {itinerary.hotel?.options?.length && (() => {
+          const opts = itinerary.hotel!.options
+          const h = opts[hotelIdx] ?? opts[0]
+          return (
+            <Section
+              icon={<Hotel size={18} />} title="Where you'll stay" source="Google Hotels" color="s" key="hotel" delay={80}
+              nav={<OptionNav idx={hotelIdx} total={opts.length} onPrev={() => setHotelIdx(i => i - 1)} onNext={() => setHotelIdx(i => i + 1)} />}
+            >
+              <HotelCard key={h.name} hotel={h} travellers={state.travellers} />
+            </Section>
+          )
+        })()}
 
         {itinerary.days && (
           <Section icon={<Map size={18} />} title="Day by day" source="TripAdvisor" color="t" key="days" delay={160}>

@@ -20,9 +20,10 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
   const [itinerary, setItinerary] = useState<ItineraryState>({})
   const [busy, setBusy] = useState(false)
   const [booked, setBooked] = useState(false)
+  const [displayTotal, setDisplayTotal] = useState<number | null>(null)
   const sentInitial = useRef(false)
 
-  const total = itinerary.budget?.total ?? 0
+  const total = displayTotal ?? itinerary.budget?.total ?? 0
 
   const callbacks = useCallback(() => ({
     onTextDelta: (delta: string) => {
@@ -100,7 +101,7 @@ export function PlanningPage({ tripId, intake, setIntake, theme, onToggleTheme, 
       />
       <div className="workspace">
         <Chat messages={messages} activeBlocks={activeBlocks} busy={busy} onSend={handleSend} />
-        <ItineraryPanel itinerary={itinerary} state={intake} />
+        <ItineraryPanel itinerary={itinerary} state={intake} onTotalChange={setDisplayTotal} />
       </div>
     </div>
   )

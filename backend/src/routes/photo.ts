@@ -12,8 +12,10 @@ router.get('/', async (c) => {
   try {
     const data = await serpFetch({ engine: 'google_images', q, num: '5' }) as Record<string, unknown>
     const results = data.images_results as Record<string, unknown>[] | undefined
-    const url = results?.[0]?.original ?? results?.[0]?.thumbnail
+    // Prefer thumbnail (Google-hosted CDN, never hotlink-blocked) over original
+    const url = results?.[0]?.thumbnail ?? results?.[0]?.original
     if (!url) return c.json({ url: null })
+    console.log(`[photo] "${q}" → ${url}`)
     return c.json({ url })
   } catch (err) {
     console.error('[photo] error:', err)

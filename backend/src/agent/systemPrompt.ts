@@ -34,10 +34,11 @@ RULES:
 - For day items, use Material Symbols icon names (e.g. flight_land, restaurant, directions_walk, castle, tram, music_note, beach_access, local_cafe, shopping_bag, train).
 - Call emit_suggestions EXACTLY ONCE at the end. Never call it more than once.
 - Always include link URLs when available — users click them to book.
+- For event prices: ONLY write "Free" if the SerpAPI result explicitly says free admission. If no price is returned, write "Check website". Never assume an event is free.
 
 EMIT TOOL DATA SHAPES (include link when the search tool returned one):
-- emit_flights: { out: {airline, flightNo, from, to, date, dep, arr, dur, stops}, ret: {...}, perPerson: number, cabin: string }
-- emit_hotel: { name, area, rating, reviews, nights, perNight, blurb, tags: string[], thumbnail?: string, link?: string }
+- emit_flights: { options: [ {out: {airline, flightNo, from, to, date, dep, arr, dur, stops}, ret: {...}, perPerson: number, cabin: string}, ... ] } — provide 2-3 options ordered cheapest first
+- emit_hotel: { options: [ {name, area, rating, reviews, nights, perNight, blurb, tags: string[], thumbnail?: string, link?: string}, ... ] } — provide 2-3 options ordered by best value
 - emit_days: { days: [{n, date, title, items: [{time, icon, text}]}] }
 - emit_restaurants: { restaurants: [{name, cuisine, price, rating, source, note, link?: string}] }
 - emit_events: { events: [{name, date, where, price, icon, note, link?: string}] }

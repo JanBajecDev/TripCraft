@@ -7,15 +7,21 @@ const FlightLegSchema = z.object({
   dep: z.string(), arr: z.string(), dur: z.string(), stops: z.string(),
 })
 
-const FlightsSchema = z.object({
+const FlightOptionSchema = z.object({
   out: FlightLegSchema, ret: FlightLegSchema,
   perPerson: z.number(), cabin: z.string(),
 })
+const FlightsSchema = z.object({
+  options: z.array(FlightOptionSchema).min(1).max(3),
+})
 
-const HotelSchema = z.object({
+const HotelOptionSchema = z.object({
   name: z.string(), area: z.string(), rating: z.number(), reviews: z.number(),
   nights: z.number(), perNight: z.number(), blurb: z.string(), tags: z.array(z.string()),
   thumbnail: z.string().optional(), link: z.string().optional(),
+})
+const HotelSchema = z.object({
+  options: z.array(HotelOptionSchema).min(1).max(3),
 })
 
 const DayItemSchema = z.object({ time: z.string(), icon: z.string(), text: z.string() })
