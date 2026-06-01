@@ -73,6 +73,7 @@ router.post("/:id/messages", async (c) => {
     try {
       await runAgent({ trip, history, send, tripId });
     } catch (err) {
+      console.error('[route] agent error:', err)
       send("error", {
         message: err instanceof Error ? err.message : "Unknown error",
       });

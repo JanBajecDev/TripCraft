@@ -18,5 +18,6 @@ app.get('/health', (c) => c.json({ ok: true }))
 
 export default {
   port: Number(process.env.PORT ?? 3001),
+  idleTimeout: 0,  // disable timeout — SSE streams can run for minutes
   fetch: app.fetch,
 }

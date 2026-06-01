@@ -42,6 +42,8 @@ export async function runAgent({
   const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! })
   const model = openrouter(process.env.AI_MODEL ?? 'anthropic/claude-sonnet-4-5')
 
+  console.log(`[agent] starting for trip ${tripId} → ${trip.destination}, model: ${process.env.AI_MODEL}`)
+
   let fullText = ''
   const itineraryUpdates: Record<string, unknown> = {}
 
@@ -83,8 +85,8 @@ export async function runAgent({
         const args = chunk.args as Record<string, unknown>
 
         if (EMIT_SECTION_MAP[name]) {
-          // Structured itinerary data — send to panel, don't show as tool row
           const section = EMIT_SECTION_MAP[name]
+          console.log(`[agent] emit_${section}`)
           const data = section === 'days' ? args.days
             : section === 'restaurants' ? args.restaurants
             : section === 'events' ? args.events
@@ -92,9 +94,10 @@ export async function runAgent({
           send('itinerary_update', { section, data })
           itineraryUpdates[section === 'car' ? 'carRental' : section] = data
         } else if (name === 'emit_suggestions') {
+          console.log(`[agent] emit_suggestions: ${JSON.stringify(args.items)}`)
           send('suggestions', { items: args.items })
         } else {
-          // Real API tool — show as spinning tool row
+          console.log(`[agent] tool call: ${name}`)
           send('tool_start', { toolName: name })
         }
         break
@@ -102,12 +105,18 @@ export async function runAgent({
 
       case 'tool-result': {
         if (!SILENT_TOOLS.has(chunk.toolName)) {
+          console.log(`[agent] tool done: ${chunk.toolName}`)
           send('tool_done', { toolName: chunk.toolName })
         }
         break
       }
 
+      case 'error':
+        console.error('[agent] stream error:', chunk.error)
+        break
+
       case 'finish':
+        console.log(`[agent] finished. text length: ${fullText.length}, itinerary sections: ${Object.keys(itineraryUpdates).join(', ') || 'none'}`)
         await db.insert(messages).values({ tripId, role: 'assistant', content: fullText })
 
         if (Object.keys(itineraryUpdates).length > 0) {
