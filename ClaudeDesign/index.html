@@ -1,0 +1,184 @@
+<!doctype html>
+<html class="light">
+<head>
+  <meta charset="utf-8">
+  <title>Wayfare — plan a trip by talking to it</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+  <link rel="stylesheet" href="colors_and_type.css">
+  <link rel="stylesheet" href="app.css">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="app-data.jsx"></script>
+  <script type="text/babel" src="Intake.jsx"></script>
+  <script type="text/babel" src="SummaryBar.jsx"></script>
+  <script type="text/babel" src="Chat.jsx"></script>
+  <script type="text/babel" src="ItineraryPanel.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "dark": false,
+      "accent": "#1E7FA0",
+      "density": "regular",
+      "corners": "soft",
+      "chatStyle": "flat"
+    }/*EDITMODE-END*/;
+
+    const CORNER_MAP = { sharp: '8px', soft: '14px', round: '20px' };
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const FIRST = ['flights', 'hotel', 'days', 'restaurants', 'events'];
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const theme = t.dark ? 'dark' : 'light';
+
+      const [phase, setPhase] = useState('intake');
+      const [intake, setIntake] = useState(INTAKE_DEFAULTS);
+      const [messages, setMessages] = useState([]);
+      const [busy, setBusy] = useState(false);
+      const [reveal, setReveal] = useState([]);
+      const [flags, setFlags] = useState({});
+      const [booked, setBooked] = useState(false);
+      const idRef = useRef(0);
+      const nid = () => ++idRef.current;
+
+      // apply theme + tweaks to <html>
+      useEffect(() => {
+        const cls = [theme];
+        if (t.density !== 'regular') cls.push('density-' + t.density);
+        document.documentElement.className = cls.join(' ');
+        const root = document.documentElement.style;
+        root.setProperty('--radius-card', CORNER_MAP[t.corners] || '14px');
+        if (t.accent && t.accent !== '#1E7FA0') {
+          root.setProperty('--primary', t.accent);
+          root.setProperty('--on-primary', '#FFFFFF');
+        } else {
+          root.removeProperty('--primary');
+          root.removeProperty('--on-primary');
+        }
+      }, [theme, t.density, t.corners, t.accent]);
+
+      const setIn = patch => setIntake(s => ({ ...s, ...patch }));
+      const budget = buildBudget(intake, { cheapHotel: flags.cheapHotel, car: flags.car });
+
+      // ---- streaming engine ----
+      function patch(id, fn) {
+        setMessages(ms => ms.map(m => m.id === id ? { ...m, blocks: fn(m.blocks) } : m));
+      }
+      async function streamText(id, text) {
+        const words = text.split(' ');
+        patch(id, b => [...b, { type: 'text', text: '', streaming: true }]);
+        let acc = '';
+        for (let i = 0; i < words.length; i++) {
+          acc += (i ? ' ' : '') + words[i];
+          const cur = acc;
+          patch(id, b => { const nb = [...b]; nb[nb.length - 1] = { ...nb[nb.length - 1], text: cur }; return nb; });
+          await sleep(11 + Math.random() * 16);
+        }
+        patch(id, b => { const nb = [...b]; nb[nb.length - 1] = { ...nb[nb.length - 1], streaming: false }; return nb; });
+      }
+      function applyPopulate(p) {
+        if (FIRST.includes(p) || p === 'car') setReveal(r => r.includes(p) ? r : [...r, p]);
+      }
+      async function runTool(id, step) {
+        patch(id, b => [...b, { type: 'tool', api: step.api, label: step.label, status: 'running' }]);
+        await sleep(620 + Math.random() * 420);
+        patch(id, b => { const nb = [...b]; nb[nb.length - 1] = { ...nb[nb.length - 1], status: 'done' }; return nb; });
+        if (step.populate) applyPopulate(step.populate);
+      }
+      async function runTurn(steps, extra) {
+        const id = nid();
+        setMessages(ms => [...ms, { id, role: 'assistant', blocks: [] }]);
+        await sleep(280);
+        for (const step of steps) {
+          if (step.type === 'text') await streamText(id, step.text);
+          else if (step.type === 'tool') await runTool(id, step);
+          else if (step.type === 'suggestions') patch(id, b => [...b, { type: 'suggestions', items: step.items }]);
+        }
+        if (extra && extra.mutate && Object.keys(extra.mutate).length) {
+          setFlags(prev => ({ ...prev, ...extra.mutate }));
+          await sleep(180);
+        }
+        if (extra && extra.reply) await streamText(id, extra.reply);
+        if (extra && extra.suggestions) patch(id, b => [...b, { type: 'suggestions', items: extra.suggestions }]);
+        setBusy(false);
+      }
+
+      function startPlanning() {
+        setPhase('planning');
+        setBusy(true);
+        runTurn(buildAgentScript(intake));
+      }
+
+      function handleSend(text) {
+        setMessages(ms => [...ms, { id: nid(), role: 'user', text }]);
+        setBusy(true);
+        const res = respondToMessage(text, { flags, state: intake });
+        runTurn(res.steps, { reply: res.reply, mutate: res.mutate });
+      }
+
+      function handleBook() {
+        if (busy || booked) return;
+        setBooked(true);
+        setBusy(true);
+        runTurn([], {
+          reply: `All booked — flights, the hotel and your timed tickets are confirmed for ${intake.dateExact}. I’ve sent the itinerary and booking references to your email. Have a wonderful time in Lisbon.`,
+          suggestions: ['Add travel insurance', 'Pre-book an airport transfer', 'What should we pack?'],
+        });
+      }
+
+      return (
+        <div className="app">
+          {phase === 'intake'
+            ? <Intake state={intake} set={setIn} onSubmit={startPlanning} />
+            : (
+              <React.Fragment>
+                <SummaryBar
+                  state={intake} set={setIn}
+                  theme={theme} onToggleTheme={() => setTweak('dark', !t.dark)}
+                  tripReady={reveal.filter(k => FIRST.includes(k)).length >= 5}
+                  total={budget.total} onBook={handleBook} booked={booked}
+                />
+                <div className="workspace">
+                  <Chat messages={messages} busy={busy} onSend={handleSend} bubble={t.chatStyle === 'bubble'} />
+                  <ItineraryPanel reveal={reveal} flags={flags} state={intake} budget={budget} />
+                </div>
+              </React.Fragment>
+            )}
+
+          <TweaksPanel>
+            <TweakSection label="Theme" />
+            <TweakToggle label="Dark mode" value={t.dark} onChange={v => setTweak('dark', v)} />
+            <TweakColor label="Accent" value={t.accent}
+              options={['#1E7FA0', '#C2410C', '#3B6553', '#5A4884']}
+              onChange={v => setTweak('accent', v)} />
+            <TweakSection label="Layout" />
+            <TweakRadio label="Density" value={t.density}
+              options={['compact', 'regular', 'comfy']}
+              onChange={v => setTweak('density', v)} />
+            <TweakRadio label="Card corners" value={t.corners}
+              options={['sharp', 'soft', 'round']}
+              onChange={v => setTweak('corners', v)} />
+            <TweakRadio label="Chat style" value={t.chatStyle}
+              options={['flat', 'bubble']}
+              onChange={v => setTweak('chatStyle', v)} />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
