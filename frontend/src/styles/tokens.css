@@ -1,0 +1,252 @@
+/* ============================================================
+   Colors & Type tokens — ported from ClaudeDesign
+   ============================================================ */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/GeistVF.woff') format('woff-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMonoVF.woff') format('woff-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+:root,
+html.light {
+  --brand-ink:          #0F1A20;
+  --brand-ink-2:        #172631;
+  --brand-accent:       #1E7FA0;
+  --brand-accent-hover: #165E78;
+  --brand-signal:       #1E7FA0;
+
+  --n-0:   #FFFFFF;
+  --n-5:   #FAFCFD;
+  --n-10:  #F5F9FB;
+  --n-20:  #ECF2F5;
+  --n-30:  #DDE6EB;
+  --n-40:  #CBD6DC;
+  --n-50:  #9EACB3;
+  --n-60:  #72808A;
+  --n-70:  #4E5A63;
+  --n-80:  #2F3940;
+  --n-90:  #1A2127;
+  --n-95:  #0F151A;
+  --n-100: #060A0D;
+
+  --p-10:  #062B3A;
+  --p-20:  #0C4459;
+  --p-30:  #165E78;
+  --p-40:  #1E7FA0;
+  --p-50:  #3EA8C8;
+  --p-60:  #88D2E7;
+  --p-80:  #C8ECF5;
+  --p-90:  #E3F5FB;
+  --p-95:  #F2FAFD;
+
+  --s-20:  #1E3A2F;
+  --s-40:  #3B6553;
+  --s-60:  #7FA591;
+  --s-80:  #C8DCCF;
+  --s-90:  #E2ECE5;
+
+  --t-20:  #2E2147;
+  --t-40:  #5A4884;
+  --t-60:  #9688B4;
+  --t-80:  #D4CCE3;
+  --t-90:  #ECE6F2;
+
+  --error:            #B42318;
+  --error-container:  #FEE4E2;
+  --on-error-container: #7A271A;
+  --warning:          #B54708;
+  --warning-container:#FEF0C7;
+  --success:          #027A48;
+  --success-container:#D1FADF;
+  --info:             #175CD3;
+  --info-container:   #E0F2FE;
+
+  --background:             var(--n-10);
+  --on-background:          var(--n-95);
+  --surface:                var(--n-5);
+  --surface-dim:            var(--n-20);
+  --surface-bright:         var(--n-0);
+  --surface-container:      var(--n-20);
+  --surface-container-high: var(--n-30);
+  --on-surface:             var(--n-95);
+  --on-surface-variant:     var(--n-70);
+  --outline:                var(--n-40);
+  --outline-variant:        var(--n-30);
+
+  --primary:                 var(--p-40);
+  --on-primary:              var(--n-0);
+  --primary-container:       var(--p-90);
+  --on-primary-container:    var(--p-20);
+
+  --secondary:               var(--s-40);
+  --on-secondary:            var(--n-0);
+  --secondary-container:     var(--s-90);
+  --on-secondary-container:  var(--s-20);
+
+  --tertiary:                var(--t-40);
+  --on-tertiary:             var(--n-0);
+  --tertiary-container:      var(--t-90);
+  --on-tertiary-container:   var(--t-20);
+
+  --fg-1:  var(--n-95);
+  --fg-2:  var(--n-80);
+  --fg-3:  var(--n-70);
+  --fg-4:  var(--n-60);
+  --bg-1:  var(--n-10);
+  --bg-2:  var(--n-5);
+  --bg-3:  var(--n-0);
+  --bg-code: #ECF2F5;
+
+  --glass-bg:   rgba(136, 210, 231, 0.7);
+  --glass-blur: blur(20px);
+  --shadow-xs:  0 1px 0 rgba(15, 33, 39, 0.04);
+  --shadow-sm:  0 1px 2px rgba(15, 33, 39, 0.06), 0 1px 1px rgba(15, 33, 39, 0.04);
+  --shadow-md:  0 4px 12px -2px rgba(15, 33, 39, 0.08), 0 2px 4px -1px rgba(15, 33, 39, 0.05);
+  --shadow-lg:  0 20px 40px -12px rgba(15, 33, 39, 0.14), 0 8px 16px -4px rgba(15, 33, 39, 0.06);
+  --shadow-inner: inset 0 1px 0 rgba(255,255,255,0.7);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 400ms;
+}
+
+html.dark {
+  --background:             #120F0E;
+  --on-background:          #F6F1EE;
+  --surface:                #1A1614;
+  --surface-dim:            #120F0E;
+  --surface-bright:         #2A2421;
+  --surface-container:      #1E1A18;
+  --surface-container-high: #26211E;
+  --on-surface:             #F6F1EE;
+  --on-surface-variant:     #BDB0AA;
+  --outline:                #3D3532;
+  --outline-variant:        #2A2421;
+
+  --primary:                 #88D2E7;
+  --on-primary:              #062B3A;
+  --primary-container:       #0C4459;
+  --on-primary-container:    #E3F5FB;
+
+  --secondary:               #9FC7B2;
+  --on-secondary:            #1E3A2F;
+  --secondary-container:     #2F4E3F;
+  --on-secondary-container:  #E2ECE5;
+
+  --tertiary:                #B5A8D1;
+  --on-tertiary:             #2E2147;
+  --tertiary-container:      #473869;
+  --on-tertiary-container:   #ECE6F2;
+
+  --fg-1: #F6F1EE;
+  --fg-2: #D9CFCA;
+  --fg-3: #A8998F;
+  --fg-4: #7A6D65;
+  --bg-1: #120F0E;
+  --bg-2: #1A1614;
+  --bg-3: #241F1C;
+  --bg-code: #201B19;
+
+  --error:            #F97066;
+  --error-container:  #7A271A;
+  --on-error-container:#FECDCA;
+  --warning:          #FDB022;
+  --warning-container:#7A4A04;
+  --success:          #32D583;
+  --success-container:#054F31;
+  --info:             #53B1FD;
+  --info-container:   #0B4A6F;
+
+  --glass-bg:   rgba(12, 68, 89, 0.7);
+  --shadow-xs:  0 1px 0 rgba(0,0,0,0.4);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.5), 0 1px 1px rgba(0,0,0,0.3);
+  --shadow-md:  0 4px 12px -2px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.35);
+  --shadow-lg:  0 20px 40px -12px rgba(0,0,0,0.6), 0 8px 16px -4px rgba(0,0,0,0.4);
+  --shadow-inner: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+:root {
+  --font-body:     'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-headline: 'Plus Jakarta Sans', 'Geist', -apple-system, sans-serif;
+  --font-mono:     'Geist Mono', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
+
+  --fs-display: clamp(2.5rem, 4.2vw, 3.75rem);
+  --fs-h1:      clamp(2rem, 3vw, 2.625rem);
+  --fs-h2:      clamp(1.5rem, 2.2vw, 1.875rem);
+  --fs-h3:      1.25rem;
+  --fs-h4:      1.0625rem;
+  --fs-body:    0.9375rem;
+  --fs-body-lg: 1.0625rem;
+  --fs-small:   0.8125rem;
+  --fs-micro:   0.6875rem;
+  --fs-code:    0.875rem;
+
+  --lh-tight:   1.12;
+  --lh-snug:    1.28;
+  --lh-normal:  1.5;
+  --lh-loose:   1.68;
+
+  --tr-tight:   -0.025em;
+  --tr-snug:    -0.015em;
+  --tr-normal:  0;
+  --tr-wide:    0.04em;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--on-background);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv01", "ss01";
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: -4px;
+}
+.material-symbols-outlined.filled { font-variation-settings: 'FILL' 1; }
+
+::selection {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
